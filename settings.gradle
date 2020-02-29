@@ -1,0 +1,6 @@
+rootProject.name = 'stormy'
+include 'stormy-shared'
+include 'stormy-client'
+include 'stormy-nimbus'
+include 'stormy-supervisor'
+include 'stormy-worker'
