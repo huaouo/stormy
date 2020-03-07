@@ -1,0 +1,3 @@
+dependencies {
+    implementation 'io.javalin:javalin:3.7.0'
+}
