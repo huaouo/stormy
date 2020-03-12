@@ -61,7 +61,7 @@ public class ClientMain {
         }
 
         ManagedChannel channel = ManagedChannelBuilder.forTarget(target)
-                .usePlaintext(true)
+                .usePlaintext()
                 .build();
         try {
             ManageTopologyClient client = new ManageTopologyClient(channel);

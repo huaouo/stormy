@@ -1,30 +1,29 @@
 // Copyright 2020 Zhenhua Yang
 // Licensed under the MIT License.
 
-package com.huaouo.stormy.nimbus;
+package com.huaouo.stormy.nimbus.controller;
 
+import com.huaouo.stormy.nimbus.service.JarFileService;
 import com.huaouo.stormy.rpc.ManageTopologyRequest;
 import com.huaouo.stormy.rpc.ManageTopologyResponse;
-import com.huaouo.stormy.rpc.NimbusServiceGrpc;
-import com.huaouo.stormy.rpc.NimbusServiceGrpc.NimbusServiceImplBase;
-import dagger.grpc.server.GrpcService;
+import com.huaouo.stormy.rpc.ManageTopologyServiceGrpc.ManageTopologyServiceImplBase;
 import io.grpc.stub.StreamObserver;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
-
-@GrpcService(grpcClass = NimbusServiceGrpc.class)
-public class NimbusController extends NimbusServiceImplBase {
+@Singleton
+public class ManageTopologyController extends ManageTopologyServiceImplBase {
 
     @Inject
-    public NimbusController() {
-    }
+    JarFileService service;
 
     @Override
     public void manageTopology(ManageTopologyRequest request, StreamObserver<ManageTopologyResponse> responseObserver) {
         System.out.println("Request Type: " + request.getRequestType());
         System.out.println("Topology Name: " + request.getTopologyName());
         System.out.println("Data: " + request.getJarBytes());
+        System.out.println(service != null ? "worked" : "not work");
 
         ManageTopologyResponse.Builder responseBuilder = ManageTopologyResponse.newBuilder();
         switch (request.getRequestType()) {

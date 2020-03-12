@@ -3,8 +3,10 @@
 
 package com.huaouo.stormy.nimbus;
 
-import dagger.grpc.server.NettyServerModule;
-import io.grpc.Server;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.huaouo.stormy.nimbus.controller.ManageTopologyController;
+import io.grpc.*;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -21,11 +23,21 @@ public class NimbusServer {
     }
 
     public void start() throws IOException {
-        NimbusComponent component = DaggerNimbusComponent.builder()
-                .nettyServerModule(NettyServerModule.bindingToPort(port))
-                .build();
-        server = component.server();
-        server.start();
+        Injector injector = Guice.createInjector(new GuiceModule());
+
+        server = ServerBuilder.forPort(port)
+                .intercept(new ServerInterceptor() {
+                    @Override
+                    public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(
+                            ServerCall<ReqT, RespT> call, Metadata headers,
+                            ServerCallHandler<ReqT, RespT> next) {
+                        call.setCompression("gzip");
+                        return next.startCall(call, headers);
+                    }
+                })
+                .addService(injector.getInstance(ManageTopologyController.class))
+                .build()
+                .start();
 
         log.info("Server started, listening on tcp port " + port);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
