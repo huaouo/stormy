@@ -4,9 +4,9 @@
 package com.huaouo.stormy.client;
 
 import com.google.protobuf.ByteString;
-import com.huaouo.stormy.rpc.ClientRequest;
-import com.huaouo.stormy.rpc.ClientRequest.RequestType;
-import com.huaouo.stormy.rpc.NimbusResponse;
+import com.huaouo.stormy.rpc.ManageTopologyRequest;
+import com.huaouo.stormy.rpc.ManageTopologyRequest.RequestType;
+import com.huaouo.stormy.rpc.ManageTopologyResponse;
 import com.huaouo.stormy.rpc.NimbusServiceGrpc;
 import io.grpc.Channel;
 import io.grpc.StatusRuntimeException;
@@ -15,11 +15,11 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class NimbusServiceClient {
+public class ManageTopologyClient {
 
     private final NimbusServiceGrpc.NimbusServiceBlockingStub blockingStub;
 
-    public NimbusServiceClient(Channel channel) {
+    public ManageTopologyClient(Channel channel) {
         blockingStub = NimbusServiceGrpc.newBlockingStub(channel);
     }
 
@@ -28,13 +28,13 @@ public class NimbusServiceClient {
         if (jarByteStream == null) {
             jarByteStream = new ByteArrayInputStream(new byte[0]);
         }
-        ClientRequest clientRequest = ClientRequest.newBuilder()
+        ManageTopologyRequest clientRequest = ManageTopologyRequest.newBuilder()
                 .setRequestType(requestType)
                 .setTopologyName(topologyName)
                 .setJarBytes(ByteString.readFrom(jarByteStream))
                 .build();
 
-        NimbusResponse response;
+        ManageTopologyResponse response;
         try {
             response = blockingStub.withCompression("gzip").manageTopology(clientRequest);
         } catch (StatusRuntimeException e) {

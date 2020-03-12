@@ -3,7 +3,7 @@
 
 package com.huaouo.stormy.client;
 
-import com.huaouo.stormy.rpc.ClientRequest.RequestType;
+import com.huaouo.stormy.rpc.ManageTopologyRequest.RequestType;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
@@ -61,10 +61,10 @@ public class ClientMain {
         }
 
         ManagedChannel channel = ManagedChannelBuilder.forTarget(target)
-                .usePlaintext()
+                .usePlaintext(true)
                 .build();
         try {
-            NimbusServiceClient client = new NimbusServiceClient(channel);
+            ManageTopologyClient client = new ManageTopologyClient(channel);
             System.out.println(client.manageTopology(requestType, topologyName, jarFileStream));
         } finally {
             channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);

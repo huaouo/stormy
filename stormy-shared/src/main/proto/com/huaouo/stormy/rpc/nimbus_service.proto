@@ -1,0 +1,32 @@
+// Copyright 2020 Zhenhua Yang
+// Licensed under the MIT License.
+
+syntax = "proto3";
+
+package com.huaouo.stormy.rpc;
+
+option java_multiple_files = true;
+
+message ManageTopologyRequest {
+
+    enum RequestType {
+        START_TOPOLOGY = 0;
+        STOP_TOPOLOGY = 1;
+        QUERY_TOPOLOGY_STATUS = 2;
+    }
+
+    RequestType request_type = 1;
+    string topology_name = 2;
+    bytes jar_bytes = 3;
+}
+
+message ManageTopologyResponse {
+
+    string message = 1;
+}
+
+service NimbusService {
+
+    rpc ManageTopology (ManageTopologyRequest) returns (ManageTopologyResponse) {
+    }
+}
