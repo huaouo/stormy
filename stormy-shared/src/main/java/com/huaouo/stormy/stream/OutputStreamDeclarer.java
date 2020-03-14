@@ -4,12 +4,11 @@
 package com.huaouo.stormy.stream;
 
 import com.google.protobuf.Descriptors.DescriptorValidationException;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@Slf4j
+//@Slf4j TODO
 public class OutputStreamDeclarer {
 
     private Map<String, DynamicSchema> outputStreamSchemas = new HashMap<>();
@@ -26,7 +25,7 @@ public class OutputStreamDeclarer {
                     .build();
         } catch (DescriptorValidationException e) {
             // 预期不会抛出异常
-            log.error(e.getDescription());
+//            log.error(e.getDescription());
         }
         outputStreamSchemas.put(stringId, schema);
         return this;

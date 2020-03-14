@@ -12,7 +12,7 @@ allprojects {
     apply plugin: 'idea'
 
     group 'com.huaouo'
-    version '0.1'
+    version '0.1-SNAPSHOT'
 }
 
 subprojects {
@@ -34,7 +34,7 @@ subprojects {
         annotationProcessor 'org.projectlombok:lombok:1.18.12'
         implementation 'org.apache.commons:commons-lang3:3.9'
         implementation 'io.lettuce:lettuce-core:5.2.2.RELEASE'
-        if (project.name != 'stormy-shared' && project.name != 'stormy-client') {
+        if (project.name != 'stormy-client') {
             implementation 'org.slf4j:slf4j-api:1.7.30'
             implementation 'ch.qos.logback:logback-classic:1.2.3'
             implementation 'com.google.inject:guice:4.2.2'
@@ -50,10 +50,10 @@ subprojects {
     }
 
     if (project.name != 'stormy-shared') {
-        def projectSuffix = project.name.split('-')[1]
-
         shadowJar {
-            classifier('')
+            def projectSuffix = project.name.split('-')[1]
+
+            archiveFileName.set("${projectSuffix}.jar")
 
             manifest {
                 attributes(

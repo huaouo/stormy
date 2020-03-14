@@ -20,7 +20,7 @@ public class ClientMain {
         if (args.length == 0 || !args[0].matches("start|status|stop")) {
             System.err.println("Usage:");
             System.err.println("start <nimbus_ip> <jarFile> <topologyName>");
-            System.err.println("status <nimbus_ip>");
+            System.err.println("listRunning <nimbus_ip>");
             System.err.println("stop <nimbus_ip> <topologyName>");
             System.exit(INVALID_COMMAND);
         }
@@ -41,12 +41,12 @@ public class ClientMain {
                 jarFileStream = new FileInputStream(new File(args[2]));
                 topologyName = args[3];
                 break;
-            case "status":
+            case "listRunning":
                 if (args.length < 2) {
                     System.err.println("Lack of arguments");
                     System.exit(LACK_OF_ARGUMENTS);
                 }
-                requestType = RequestType.QUERY_TOPOLOGY_STATUS;
+                requestType = RequestType.QUERY_RUNNING_TOPOLOGY;
                 target = args[1] + target;
                 break;
             case "stop":

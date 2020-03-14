@@ -7,7 +7,8 @@ import com.google.protobuf.ByteString;
 import com.huaouo.stormy.rpc.ManageTopologyRequest;
 import com.huaouo.stormy.rpc.ManageTopologyRequest.RequestType;
 import com.huaouo.stormy.rpc.ManageTopologyResponse;
-import com.huaouo.stormy.rpc.ManageTopologyServiceGrpc;
+import com.huaouo.stormy.rpc.ManageTopologyGrpc;
+import com.huaouo.stormy.rpc.ManageTopologyGrpc.ManageTopologyBlockingStub;
 import io.grpc.Channel;
 import io.grpc.StatusRuntimeException;
 
@@ -17,10 +18,10 @@ import java.io.InputStream;
 
 public class ManageTopologyClient {
 
-    private final ManageTopologyServiceGrpc.ManageTopologyServiceBlockingStub blockingStub;
+    private final ManageTopologyBlockingStub blockingStub;
 
     public ManageTopologyClient(Channel channel) {
-        blockingStub = ManageTopologyServiceGrpc.newBlockingStub(channel);
+        blockingStub = ManageTopologyGrpc.newBlockingStub(channel);
     }
 
     public String manageTopology(RequestType requestType, String topologyName, InputStream jarByteStream)

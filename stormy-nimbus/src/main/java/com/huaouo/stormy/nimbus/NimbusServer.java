@@ -5,7 +5,9 @@ package com.huaouo.stormy.nimbus;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.huaouo.stormy.GuiceModule;
 import com.huaouo.stormy.nimbus.controller.ManageTopologyController;
+import com.huaouo.stormy.provider.RedisConnection;
 import io.grpc.*;
 import lombok.extern.slf4j.Slf4j;
 
@@ -44,8 +46,9 @@ public class NimbusServer {
             try {
                 NimbusServer.this.stop();
             } catch (InterruptedException e) {
-                e.printStackTrace(System.err);
+                log.error(e.getMessage());
             }
+            cleanUpSingletonResources();
             log.info("Server shut down");
         }));
     }
@@ -53,6 +56,7 @@ public class NimbusServer {
     public void stop() throws InterruptedException {
         if (server != null) {
             server.shutdown().awaitTermination(30, TimeUnit.SECONDS);
+            cleanUpSingletonResources();
             log.info("Server shut down");
         }
     }
@@ -60,7 +64,17 @@ public class NimbusServer {
     public void blockUntilShutdown() throws InterruptedException {
         if (server != null) {
             server.awaitTermination();
+            cleanUpSingletonResources();
             log.info("Server shut down");
         }
+    }
+
+    private void cleanUpSingletonResources() {
+        log.info("Cleaning up global resources");
+        Injector injector = Guice.createInjector(new GuiceModule());
+
+        // When Runtime.addShutdownHook() in start() is invoked, the following resources
+        // have already constructed properly. Therefore, they're safe to release.
+        injector.getInstance(RedisConnection.class).close();
     }
 }

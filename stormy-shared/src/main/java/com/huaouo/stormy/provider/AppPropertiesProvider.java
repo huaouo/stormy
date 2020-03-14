@@ -1,7 +1,7 @@
 // Copyright 2020 Zhenhua Yang
 // Licensed under the MIT License.
 
-package com.huaouo.stormy.nimbus;
+package com.huaouo.stormy.provider;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -13,45 +13,49 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 @Slf4j
-class PropertiesProvider implements Provider<Properties> {
+public class AppPropertiesProvider implements Provider<Properties> {
 
     @Override
     public Properties get() {
-        Path propFilePath = null;
+        Path appPropFilePath = null;
         try {
-            propFilePath = Paths.get(
+            appPropFilePath = Paths.get(
                     getClass().getProtectionDomain().getCodeSource().getLocation().toURI()
             ).getParent().resolve("application.properties");
         } catch (URISyntaxException ignored) {
         }
 
-        InputStream propFileStream = null;
-        if (propFilePath != null && Files.exists(propFilePath)) {
+        InputStream appPropFileStream = null;
+        if (appPropFilePath != null && Files.exists(appPropFilePath)) {
             try {
-                propFileStream = Files.newInputStream(propFilePath);
+                appPropFileStream = Files.newInputStream(appPropFilePath);
             } catch (IOException ignored) {
             }
         }
-        if (propFileStream == null) {
-            // propFileStream won't be null, since application.properties here is bundled into jar
-            propFileStream = getClass().getResourceAsStream("/application.properties");
-            if (propFileStream == null) {
+        if (appPropFileStream == null) {
+            // appPropFileStream won't be null, since application.properties here is bundled into jar
+            appPropFileStream = getClass().getResourceAsStream("/application.properties");
+            if (appPropFileStream == null) {
                 log.error("'application.properties' wasn't bundled into jar");
                 System.exit(-1);
             }
+            log.info("Using bundled 'application.properties'");
+        } else {
+            log.info("Using custom 'application.properties'");
         }
 
         Properties prop = new Properties();
         try {
-            prop.load(propFileStream);
+            prop.load(appPropFileStream);
         } catch (IOException e) {
             log.error(e.getMessage());
             System.exit(-1);
         } finally {
             try {
-                propFileStream.close();
+                appPropFileStream.close();
             } catch (IOException e) {
                 log.error(e.getMessage());
             }
