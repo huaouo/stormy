@@ -33,7 +33,10 @@ subprojects {
         compileOnly 'org.projectlombok:lombok:1.18.12'
         annotationProcessor 'org.projectlombok:lombok:1.18.12'
         implementation 'org.apache.commons:commons-lang3:3.9'
-        implementation 'io.lettuce:lettuce-core:5.2.2.RELEASE'
+        implementation('org.apache.zookeeper:zookeeper:3.6.0') {
+            exclude group: 'org.slf4j', module: 'slf4j-log4j12'
+        }
+
         if (project.name != 'stormy-client') {
             implementation 'org.slf4j:slf4j-api:1.7.30'
             implementation 'ch.qos.logback:logback-classic:1.2.3'

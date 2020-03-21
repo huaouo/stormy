@@ -12,7 +12,6 @@ import com.huaouo.stormy.rpc.ManageTopologyGrpc.ManageTopologyBlockingStub;
 import io.grpc.Channel;
 import io.grpc.StatusRuntimeException;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -24,20 +23,19 @@ public class ManageTopologyClient {
         blockingStub = ManageTopologyGrpc.newBlockingStub(channel);
     }
 
-    public String manageTopology(RequestType requestType, String topologyName, InputStream jarByteStream)
+    // jarByteStream won't be closed here
+    public String manageTopology(RequestType requestType, String topologyName, InputStream jarFileStream)
             throws IOException {
-        if (jarByteStream == null) {
-            jarByteStream = new ByteArrayInputStream(new byte[0]);
-        }
-        ManageTopologyRequest clientRequest = ManageTopologyRequest.newBuilder()
+        ManageTopologyRequest.Builder clientRequestBuilder = ManageTopologyRequest.newBuilder()
                 .setRequestType(requestType)
-                .setTopologyName(topologyName)
-                .setJarBytes(ByteString.readFrom(jarByteStream))
-                .build();
+                .setTopologyName(topologyName);
+        if (jarFileStream != null) {
+            clientRequestBuilder.setJarBytes(ByteString.readFrom(jarFileStream));
+        }
 
         ManageTopologyResponse response;
         try {
-            response = blockingStub.withCompression("gzip").manageTopology(clientRequest);
+            response = blockingStub.withCompression("gzip").manageTopology(clientRequestBuilder.build());
         } catch (StatusRuntimeException e) {
             return e.getMessage();
         }

@@ -19,9 +19,9 @@ public class ClientMain {
     public static void main(String[] args) throws Exception {
         if (args.length == 0 || !args[0].matches("start|status|stop")) {
             System.err.println("Usage:");
-            System.err.println("start <nimbus_ip> <jarFile> <topologyName>");
-            System.err.println("listRunning <nimbus_ip>");
-            System.err.println("stop <nimbus_ip> <topologyName>");
+            System.err.println("  start <nimbus_ip> <jarFile> <topologyName>");
+            System.err.println("  listRunning <nimbus_ip>");
+            System.err.println("  stop <nimbus_ip> <topologyName>");
             System.exit(INVALID_COMMAND);
         }
 
@@ -67,6 +67,9 @@ public class ClientMain {
             ManageTopologyClient client = new ManageTopologyClient(channel);
             System.out.println(client.manageTopology(requestType, topologyName, jarFileStream));
         } finally {
+            if (jarFileStream != null) {
+                jarFileStream.close();
+            }
             channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
         }
     }

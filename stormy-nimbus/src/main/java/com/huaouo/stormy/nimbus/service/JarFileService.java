@@ -3,14 +3,12 @@
 
 package com.huaouo.stormy.nimbus.service;
 
-import com.huaouo.stormy.provider.RedisConnection;
-import io.lettuce.core.api.sync.RedisCommands;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.RandomStringUtils;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -22,13 +20,8 @@ public class JarFileService {
     private Path nimbusDataPath;
 
     @Inject
-    public JarFileService(RedisConnection redisConn) {
-        RedisCommands<String, String> redisCommands = redisConn.sync();
-        String nimbusId = redisCommands.get("nimbus_id");
-        if (nimbusId == null) {
-            nimbusId = RandomStringUtils.randomAlphanumeric(5);
-            redisCommands.set("nimbus_id", nimbusId);
-        }
+    public JarFileService(ZooKeeperService zkService) {
+        String nimbusId = zkService.getNimbusId();
 
         String tempDir = System.getProperty("java.io.tmpdir");
         nimbusDataPath = Paths.get(tempDir, "nimbus-" + nimbusId);
@@ -38,6 +31,7 @@ public class JarFileService {
                         + "', since there's already a file with a same name exists");
                 System.exit(-1);
             }
+            log.info("Nimbus data dir '" + nimbusDataPath.toString() + "' used");
         } else {
             try {
                 Files.createDirectory(nimbusDataPath);
@@ -65,8 +59,8 @@ public class JarFileService {
         Files.write(jarPath, fileBytes);
     }
 
-    public byte[] readJarFileBytes(String fileBaseName) throws IOException {
+    public InputStream readJarFile(String fileBaseName) throws IOException {
         Path jarPath = nimbusDataPath.resolve(fileBaseName + ".jar");
-        return Files.readAllBytes(jarPath);
+        return Files.newInputStream(jarPath);
     }
 }

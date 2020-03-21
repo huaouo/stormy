@@ -4,14 +4,7 @@ import com.google.protobuf.DynamicMessage;
 import com.huaouo.stormy.stream.DynamicSchema;
 import com.huaouo.stormy.stream.FieldType;
 import com.huaouo.stormy.stream.MessageDefinition;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.RedisConnectionException;
-import io.lettuce.core.RedisFuture;
-import io.lettuce.core.RedisURI;
-import io.lettuce.core.api.StatefulRedisConnection;
-import io.lettuce.core.api.async.RedisAsyncCommands;
-import io.lettuce.core.api.sync.RedisCommands;
-import io.lettuce.core.protocol.RedisCommand;
+import org.apache.zookeeper.ZooKeeper;
 
 import java.io.ByteArrayInputStream;
 import java.util.concurrent.TimeUnit;
@@ -43,24 +36,7 @@ public class SharedMain {
 //        DynamicMessage parsedMessage = parsedMessageBuilder.mergeFrom(msgBytes).build();
 //        System.out.println(parsedMessage.getField(parsedMsgDesc.findFieldByName("email")));
 
-        RedisClient redisClient = RedisClient.create("redis://localhost:6379");
-        StatefulRedisConnection<String, String> connection = redisClient.connect();
-        RedisCommands<String, String> syncCommands = connection.sync();
-        syncCommands.set("key", "Hello, Redis!");
-        System.out.println(syncCommands.get("key"));
-        connection.close();
-        redisClient.shutdown();
-
-//        RedisClient redisClient = RedisClient.create("redis://localhost");
-//        StatefulRedisConnection<String, String> connection = redisClient.connect();
-//        RedisAsyncCommands<String, String> asyncCommands = connection.async();
-//        RedisFuture<String> future = asyncCommands.get("key");
-//        future.thenAccept(System.out::println);
-//        System.out.println("Hello, World!");
-//        future.await(100, TimeUnit.SECONDS);
-//        int sum = 0;
-//        for (int i = 0; i < 100000000; i++) {
-//            sum += i;
-//        }
+//        ZooKeeper zk = new ZooKeeper();
+//        zk.create()
     }
 }

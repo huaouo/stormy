@@ -7,9 +7,10 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.huaouo.stormy.GuiceModule;
 import com.huaouo.stormy.nimbus.controller.ManageTopologyController;
-import com.huaouo.stormy.provider.RedisConnection;
+import com.huaouo.stormy.provider.ZooKeeperConnection;
 import io.grpc.*;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.zookeeper.ZooKeeper;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -75,6 +76,6 @@ public class NimbusServer {
 
         // When Runtime.addShutdownHook() in start() is invoked, the following resources
         // have already constructed properly. Therefore, they're safe to release.
-        injector.getInstance(RedisConnection.class).close();
+        injector.getInstance(ZooKeeperConnection.class).close();
     }
 }

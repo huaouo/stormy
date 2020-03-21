@@ -30,3 +30,20 @@ service ManageTopology {
     rpc ManageTopology (ManageTopologyRequest) returns (ManageTopologyResponse) {
     }
 }
+
+message ProvideJarRequest {
+    string topology_name = 1;
+}
+
+message ProvideJarResponse {
+    bytes jar_bytes = 1;
+
+    // Error message, should only be set when error occurs
+    string message = 2;
+}
+
+service ProvideJar {
+
+    rpc ProvideJar (ProvideJarRequest) returns (ProvideJarResponse) {
+    }
+}
