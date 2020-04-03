@@ -23,7 +23,7 @@ public class ZooKeeperConnection {
         try {
             zk.close();
         } catch (InterruptedException e) {
-            log.error(e.getMessage());
+            log.error(e.toString());
         }
     }
 

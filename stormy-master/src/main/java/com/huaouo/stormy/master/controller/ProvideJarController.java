@@ -1,10 +1,10 @@
 // Copyright 2020 Zhenhua Yang
 // Licensed under the MIT License.
 
-package com.huaouo.stormy.nimbus.controller;
+package com.huaouo.stormy.master.controller;
 
 import com.google.protobuf.ByteString;
-import com.huaouo.stormy.nimbus.service.JarFileService;
+import com.huaouo.stormy.master.service.JarFileService;
 import com.huaouo.stormy.rpc.ProvideJarGrpc.ProvideJarImplBase;
 import com.huaouo.stormy.rpc.ProvideJarRequest;
 import com.huaouo.stormy.rpc.ProvideJarResponse;
@@ -39,13 +39,13 @@ public class ProvideJarController extends ProvideJarImplBase {
             jarInputStream = jarService.readJarFile(topologyName);
             jarBytes = ByteString.readFrom(jarInputStream);
         } catch (IOException e) {
-            log.error(e.getMessage());
+            log.error(e.toString());
         } finally {
             if (jarInputStream != null) {
                 try {
                     jarInputStream.close();
                 } catch (IOException e) {
-                    log.error(e.getMessage());
+                    log.error(e.toString());
                 }
             }
         }

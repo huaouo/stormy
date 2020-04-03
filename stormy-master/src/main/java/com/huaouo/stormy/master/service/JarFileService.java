@@ -1,7 +1,7 @@
 // Copyright 2020 Zhenhua Yang
 // Licensed under the MIT License.
 
-package com.huaouo.stormy.nimbus.service;
+package com.huaouo.stormy.master.service;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,7 +37,7 @@ public class JarFileService {
                 Files.createDirectory(nimbusDataPath);
                 log.info("Nimbus data dir '" + nimbusDataPath.toString() + "' created");
             } catch (IOException e) {
-                log.error(e.getMessage());
+                log.error(e.toString());
                 System.exit(-1);
             }
         }

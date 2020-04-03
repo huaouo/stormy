@@ -50,13 +50,13 @@ public class AppPropertiesProvider implements Provider<Properties> {
         try {
             prop.load(appPropFileStream);
         } catch (IOException e) {
-            log.error(e.getMessage());
+            log.error(e.toString());
             System.exit(-1);
         } finally {
             try {
                 appPropFileStream.close();
             } catch (IOException e) {
-                log.error(e.getMessage());
+                log.error(e.toString());
             }
         }
 

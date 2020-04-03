@@ -3,11 +3,17 @@
 
 package com.huaouo.stormy.example;
 
+import com.huaouo.stormy.stream.OutputController;
 import com.huaouo.stormy.stream.OutputStreamDeclarer;
 import com.huaouo.stormy.topology.Spout;
 
 public class ExampleSpout implements Spout {
-    
+
+    @Override
+    public void nextTuple(OutputController controller) {
+
+    }
+
     @Override
     public void declareOutputStream(OutputStreamDeclarer declarer) {
 

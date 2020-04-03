@@ -1,4 +1,4 @@
-package com.huaouo.stormy.nimbus.service;
+package com.huaouo.stormy.master.service;
 
 import com.huaouo.stormy.provider.ZooKeeperConnection;
 import lombok.extern.slf4j.Slf4j;

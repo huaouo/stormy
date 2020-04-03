@@ -1,27 +1,27 @@
 // Copyright 2020 Zhenhua Yang
 // Licensed under the MIT License.
 
-package com.huaouo.stormy.nimbus;
+package com.huaouo.stormy.master;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.huaouo.stormy.GuiceModule;
-import com.huaouo.stormy.nimbus.controller.ManageTopologyController;
+import com.huaouo.stormy.master.controller.ManageTopologyController;
+import com.huaouo.stormy.master.controller.ProvideJarController;
 import com.huaouo.stormy.provider.ZooKeeperConnection;
 import io.grpc.*;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.zookeeper.ZooKeeper;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-public class NimbusServer {
+public class MasterServer {
 
     private Server server;
     private int port;
 
-    public NimbusServer(int port) {
+    public MasterServer(int port) {
         this.port = port;
     }
 
@@ -39,15 +39,16 @@ public class NimbusServer {
                     }
                 })
                 .addService(injector.getInstance(ManageTopologyController.class))
+                .addService(injector.getInstance(ProvideJarController.class))
                 .build()
                 .start();
 
         log.info("Server started, listening on tcp port " + port);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
-                NimbusServer.this.stop();
+                MasterServer.this.stop();
             } catch (InterruptedException e) {
-                log.error(e.getMessage());
+                log.error(e.toString());
             }
             cleanUpSingletonResources();
             log.info("Server shut down");

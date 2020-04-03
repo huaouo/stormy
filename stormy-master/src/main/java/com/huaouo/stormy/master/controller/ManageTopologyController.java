@@ -1,10 +1,10 @@
 // Copyright 2020 Zhenhua Yang
 // Licensed under the MIT License.
 
-package com.huaouo.stormy.nimbus.controller;
+package com.huaouo.stormy.master.controller;
 
-import com.huaouo.stormy.nimbus.service.JarFileService;
-import com.huaouo.stormy.nimbus.service.ZooKeeperService;
+import com.huaouo.stormy.master.service.JarFileService;
+import com.huaouo.stormy.master.service.ZooKeeperService;
 import com.huaouo.stormy.rpc.ManageTopologyRequest;
 import com.huaouo.stormy.rpc.ManageTopologyRequest.RequestType;
 import com.huaouo.stormy.rpc.ManageTopologyResponse;
@@ -56,7 +56,7 @@ public class ManageTopologyController extends ManageTopologyImplBase {
                 try {
                     jarService.writeJarFile(topologyName, jarBytes);
                 } catch (IOException e) {
-                    log.error(e.getMessage());
+                    log.error(e.toString());
                     responseBuilder.setMessage("Internal error, cannot save jar file");
                     break;
                 }

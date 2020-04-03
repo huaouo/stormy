@@ -40,7 +40,7 @@ public class ZooKeeperConnectionProvider implements Provider<ZooKeeperConnection
             });
             latch.await(connectTimeout, TimeUnit.MILLISECONDS);
         } catch (IOException | InterruptedException e) {
-            log.error(e.getMessage());
+            log.error(e.toString());
             System.exit(-1);
         }
         if (latch.getCount() != 0) {

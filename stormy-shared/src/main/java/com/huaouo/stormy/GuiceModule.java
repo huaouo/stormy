@@ -17,8 +17,7 @@ public class GuiceModule extends AbstractModule {
     protected void configure() {
         bind(Properties.class).toProvider(AppPropertiesProvider.class).asEagerSingleton();
 
-        // The following singleton should be released manually
-        // at application termination in reverse order.
+        // The following singleton should be released manually at application termination.
         bind(ZooKeeperConnection.class).toProvider(ZooKeeperConnectionProvider.class).in(Singleton.class);
     }
 }
