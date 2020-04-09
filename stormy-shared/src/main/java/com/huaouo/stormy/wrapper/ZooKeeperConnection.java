@@ -1,7 +1,7 @@
 // Copyright 2020 Zhenhua Yang
 // Licensed under the MIT License.
 
-package com.huaouo.stormy.provider;
+package com.huaouo.stormy.wrapper;
 
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +9,9 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.common.PathUtils;
+
+import java.util.List;
 
 @Slf4j
 public class ZooKeeperConnection {
@@ -55,13 +58,13 @@ public class ZooKeeperConnection {
         return zk.exists(path, null) != null;
     }
 
-    public void createSync(String path, String data) {
-        createSync(path, data, CreateMode.PERSISTENT);
+    public void createIfNotExistsSync(String path, String data) {
+        createIfNotExistsSync(path, data, CreateMode.PERSISTENT);
     }
 
     // Do nothing if path exists
     @SneakyThrows
-    public void createSync(String path, String data, CreateMode createMode) {
+    public void createIfNotExistsSync(String path, String data, CreateMode createMode) {
         if (exists(path)) {
             return;
         }
@@ -71,5 +74,29 @@ public class ZooKeeperConnection {
             dataBytes = data.getBytes();
         }
         zk.create(path, dataBytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode);
+    }
+
+    @SneakyThrows
+    public List<String> getChildrenSync(String path) {
+        return zk.getChildren(path, false);
+    }
+
+    @SneakyThrows
+    public void deleteSync(String path) {
+        zk.delete(path, -1);
+    }
+
+    @SneakyThrows
+    public void deleteRecursiveSync(String path) {
+        PathUtils.validatePath(path);
+
+        List<String> children = getChildrenSync(path);
+        if (children.isEmpty()) {
+            deleteSync(path);
+        } else {
+            for (String c : children) {
+                deleteRecursiveSync(path + "/" + c);
+            }
+        }
     }
 }

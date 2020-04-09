@@ -5,10 +5,11 @@ package com.huaouo.stormy.master.service;
 
 import lombok.extern.slf4j.Slf4j;
 
-import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -17,25 +18,23 @@ import java.nio.file.Paths;
 @Singleton
 public class JarFileService {
 
-    private Path nimbusDataPath;
+    private Path masterDataPath;
 
-    @Inject
-    public JarFileService(ZooKeeperService zkService) {
-        String nimbusId = zkService.getNimbusId();
+    public JarFileService() {
 
         String tempDir = System.getProperty("java.io.tmpdir");
-        nimbusDataPath = Paths.get(tempDir, "nimbus-" + nimbusId);
-        if (Files.exists(nimbusDataPath)) {
-            if (!Files.isDirectory(nimbusDataPath)) {
-                log.error("Cannot create nimbus data dir 'nimbus-" + nimbusId + "' in '" + tempDir
+        masterDataPath = Paths.get(tempDir, "stormy-master");
+        if (Files.exists(masterDataPath)) {
+            if (!Files.isDirectory(masterDataPath)) {
+                log.error("Cannot create master data dir 'stormy-master' in '" + tempDir
                         + "', since there's already a file with a same name exists");
                 System.exit(-1);
             }
-            log.info("Nimbus data dir '" + nimbusDataPath.toString() + "' used");
+            log.info("Master data dir '" + masterDataPath.toString() + "' used");
         } else {
             try {
-                Files.createDirectory(nimbusDataPath);
-                log.info("Nimbus data dir '" + nimbusDataPath.toString() + "' created");
+                Files.createDirectory(masterDataPath);
+                log.info("Master data dir '" + masterDataPath.toString() + "' created");
             } catch (IOException e) {
                 log.error(e.toString());
                 System.exit(-1);
@@ -44,23 +43,28 @@ public class JarFileService {
     }
 
     public boolean jarFileExists(String fileBaseName) {
-        Path jarPath = nimbusDataPath.resolve(fileBaseName + ".jar");
+        Path jarPath = masterDataPath.resolve(fileBaseName + ".jar");
         return Files.exists(jarPath) && Files.isRegularFile(jarPath);
     }
 
     public void deleteJarFile(String fileBaseName) throws IOException {
-        Path jarPath = nimbusDataPath.resolve(fileBaseName + ".jar");
+        Path jarPath = masterDataPath.resolve(fileBaseName + ".jar");
         Files.deleteIfExists(jarPath);
     }
 
     // This method will overwrite jar file if exists.
     public void writeJarFile(String fileBaseName, byte[] fileBytes) throws IOException {
-        Path jarPath = nimbusDataPath.resolve(fileBaseName + ".jar");
+        Path jarPath = masterDataPath.resolve(fileBaseName + ".jar");
         Files.write(jarPath, fileBytes);
     }
 
     public InputStream readJarFile(String fileBaseName) throws IOException {
-        Path jarPath = nimbusDataPath.resolve(fileBaseName + ".jar");
+        Path jarPath = masterDataPath.resolve(fileBaseName + ".jar");
         return Files.newInputStream(jarPath);
+    }
+
+    public URL getJarFileUrl(String fileBaseName) throws MalformedURLException {
+        Path jarPath = masterDataPath.resolve(fileBaseName + ".jar");
+        return jarPath.toUri().toURL();
     }
 }

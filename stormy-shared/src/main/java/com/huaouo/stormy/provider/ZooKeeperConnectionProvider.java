@@ -3,6 +3,7 @@
 
 package com.huaouo.stormy.provider;
 
+import com.huaouo.stormy.wrapper.ZooKeeperConnection;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.ZooKeeper;
 

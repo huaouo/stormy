@@ -1,13 +1,9 @@
-// Copyright 2020 Zhenhua Yang
-// Licensed under the MIT License.
-
-package com.huaouo.stormy.master;
+package com.huaouo.stormy.workerprocess;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.huaouo.stormy.GuiceModule;
-import com.huaouo.stormy.master.controller.ManageTopologyController;
-import com.huaouo.stormy.master.controller.ProvideJarController;
+import com.huaouo.stormy.workerprocess.controller.TransmitTupleController;
 import com.huaouo.stormy.wrapper.ZooKeeperConnection;
 import io.grpc.*;
 import lombok.extern.slf4j.Slf4j;
@@ -16,12 +12,12 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-public class MasterServer {
+public class WorkerProcessServer {
 
     private Server server;
     private int port;
 
-    public MasterServer(int port) {
+    public WorkerProcessServer(int port) {
         this.port = port;
     }
 
@@ -38,15 +34,14 @@ public class MasterServer {
                         return next.startCall(call, headers);
                     }
                 })
-                .addService(injector.getInstance(ManageTopologyController.class))
-                .addService(injector.getInstance(ProvideJarController.class))
+                .addService(injector.getInstance(TransmitTupleController.class))
                 .build()
                 .start();
 
         log.info("Server started, listening on tcp port " + port);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
-                MasterServer.this.stop();
+                WorkerProcessServer.this.stop();
             } catch (InterruptedException e) {
                 log.error(e.toString());
             }

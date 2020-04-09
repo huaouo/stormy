@@ -5,6 +5,7 @@ package com.huaouo.stormy.master.controller;
 
 import com.huaouo.stormy.master.service.JarFileService;
 import com.huaouo.stormy.master.service.ZooKeeperService;
+import com.huaouo.stormy.master.util.MasterUtil;
 import com.huaouo.stormy.rpc.ManageTopologyRequest;
 import com.huaouo.stormy.rpc.ManageTopologyRequest.RequestType;
 import com.huaouo.stormy.rpc.ManageTopologyResponse;
@@ -31,9 +32,6 @@ public class ManageTopologyController extends ManageTopologyImplBase {
         RequestType requestType = request.getRequestType();
         String topologyName = request.getTopologyName();
         byte[] jarBytes = request.getJarBytes().toByteArray();
-        System.out.println("Request Type: " + requestType);
-        System.out.println("Topology Name: " + topologyName);
-        System.out.println("Data: " + jarBytes);
 
         ManageTopologyResponse.Builder responseBuilder = ManageTopologyResponse.newBuilder();
         if (!topologyName.matches("[a-zA-Z0-9]+")) {
@@ -57,14 +55,21 @@ public class ManageTopologyController extends ManageTopologyImplBase {
                     jarService.writeJarFile(topologyName, jarBytes);
                 } catch (IOException e) {
                     log.error(e.toString());
+                    zkService.deleteTopology(topologyName);
                     responseBuilder.setMessage("Internal error, cannot save jar file");
                     break;
                 }
+                // TODO: start topology
                 responseBuilder.setMessage("Success");
                 break;
             case STOP_TOPOLOGY:
+                zkService.stopTopology(topologyName);
+                // TODO: add stop hook, delete zk entry and jar file
+                responseBuilder.setMessage("Success");
                 break;
             case QUERY_RUNNING_TOPOLOGY:
+                String message = MasterUtil.formatRunningTopologies(zkService.getRunningTopologies());
+                responseBuilder.setMessage(message);
                 break;
         }
         responseObserver.onNext(responseBuilder.build());

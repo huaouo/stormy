@@ -5,7 +5,7 @@ package com.huaouo.stormy;
 
 import com.google.inject.AbstractModule;
 import com.huaouo.stormy.provider.AppPropertiesProvider;
-import com.huaouo.stormy.provider.ZooKeeperConnection;
+import com.huaouo.stormy.wrapper.ZooKeeperConnection;
 import com.huaouo.stormy.provider.ZooKeeperConnectionProvider;
 
 import javax.inject.Singleton;
