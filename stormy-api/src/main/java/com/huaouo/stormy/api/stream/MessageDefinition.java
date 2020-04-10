@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package com.huaouo.stormy.stream;
+package com.huaouo.stormy.api.stream;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -25,29 +25,20 @@ import java.util.Map;
 import com.google.protobuf.DescriptorProtos.DescriptorProto;
 import com.google.protobuf.DescriptorProtos.FieldDescriptorProto;
 
-/**
- * MessageDefinition
- */
 public class MessageDefinition {
-    // --- public static ---
 
     public static Builder newBuilder(String msgTypeName) {
         return new Builder(msgTypeName);
     }
 
-    // --- public ---
-
     public String toString() {
         return mMsgType.toString();
     }
 
-    // --- package ---
     // TODO: changed to package
     public DescriptorProto getMessageType() {
         return mMsgType;
     }
-
-    // --- private ---
 
     private MessageDefinition(DescriptorProto msgType) {
         mMsgType = msgType;
@@ -55,16 +46,12 @@ public class MessageDefinition {
 
     private DescriptorProto mMsgType;
 
-    /**
-     * MessageDefinition.Builder
-     */
     public static class Builder {
-        // --- public ---
 
         public Builder addField(FieldType type, String name) {
             FieldDescriptorProto.Builder fieldBuilder = FieldDescriptorProto.newBuilder();
             fieldBuilder.setLabel(FieldDescriptorProto.Label.LABEL_REQUIRED);
-            FieldDescriptorProto.Type primType = sTypeMap.get(type);
+            FieldDescriptorProto.Type primType = typeMap.get(type);
             fieldBuilder.setType(primType);
             fieldBuilder.setName(name).setNumber(++messageNumber);
             mMsgTypeBuilder.addField(fieldBuilder.build());
@@ -75,8 +62,6 @@ public class MessageDefinition {
             return new MessageDefinition(mMsgTypeBuilder.build());
         }
 
-        // --- private ---
-
         private Builder(String msgTypeName) {
             mMsgTypeBuilder = DescriptorProto.newBuilder();
             mMsgTypeBuilder.setName(msgTypeName);
@@ -86,18 +71,16 @@ public class MessageDefinition {
         private DescriptorProto.Builder mMsgTypeBuilder;
     }
 
-    // --- private static ---
-
-    private static Map<FieldType, FieldDescriptorProto.Type> sTypeMap;
+    private static Map<FieldType, FieldDescriptorProto.Type> typeMap;
 
     static {
-        sTypeMap = new HashMap<>();
-        sTypeMap.put(FieldType.BOOLEAN, FieldDescriptorProto.Type.TYPE_BOOL);
-        sTypeMap.put(FieldType.INT, FieldDescriptorProto.Type.TYPE_INT32);
-        sTypeMap.put(FieldType.LONG, FieldDescriptorProto.Type.TYPE_INT64);
-        sTypeMap.put(FieldType.FLOAT, FieldDescriptorProto.Type.TYPE_FLOAT);
-        sTypeMap.put(FieldType.DOUBLE, FieldDescriptorProto.Type.TYPE_DOUBLE);
-        sTypeMap.put(FieldType.BYTES, FieldDescriptorProto.Type.TYPE_BYTES);
-        sTypeMap.put(FieldType.STRING, FieldDescriptorProto.Type.TYPE_STRING);
+        typeMap = new HashMap<>();
+        typeMap.put(FieldType.BOOLEAN, FieldDescriptorProto.Type.TYPE_BOOL);
+        typeMap.put(FieldType.INT, FieldDescriptorProto.Type.TYPE_INT32);
+        typeMap.put(FieldType.LONG, FieldDescriptorProto.Type.TYPE_INT64);
+        typeMap.put(FieldType.FLOAT, FieldDescriptorProto.Type.TYPE_FLOAT);
+        typeMap.put(FieldType.DOUBLE, FieldDescriptorProto.Type.TYPE_DOUBLE);
+        typeMap.put(FieldType.BYTES, FieldDescriptorProto.Type.TYPE_BYTES);
+        typeMap.put(FieldType.STRING, FieldDescriptorProto.Type.TYPE_STRING);
     }
 }

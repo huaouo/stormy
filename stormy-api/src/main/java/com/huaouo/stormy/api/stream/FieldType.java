@@ -1,4 +1,4 @@
-package com.huaouo.stormy.stream;
+package com.huaouo.stormy.api.stream;
 
 public enum FieldType {
 

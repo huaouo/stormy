@@ -1,14 +1,3 @@
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Descriptors.Descriptor;
-import com.google.protobuf.DynamicMessage;
-import com.huaouo.stormy.stream.DynamicSchema;
-import com.huaouo.stormy.stream.FieldType;
-import com.huaouo.stormy.stream.MessageDefinition;
-import org.apache.zookeeper.ZooKeeper;
-
-import java.io.ByteArrayInputStream;
-import java.util.concurrent.TimeUnit;
-
 public class SharedMain {
     public static void main(String[] args) throws Exception {
 //        System.out.println(ByteString.readFrom(new ByteArrayInputStream(new byte[0])));

@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package com.huaouo.stormy.stream;
+package com.huaouo.stormy.api.stream;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -37,11 +37,7 @@ import com.google.protobuf.Descriptors.DescriptorValidationException;
 import com.google.protobuf.Descriptors.FileDescriptor;
 import com.google.protobuf.DynamicMessage;
 
-/**
- * DynamicSchema
- */
 public class DynamicSchema {
-    // --- public static ---
 
     /**
      * Creates a new dynamic schema builder
@@ -83,8 +79,6 @@ public class DynamicSchema {
     public static DynamicSchema parseFrom(byte[] schemaDescBuf) throws DescriptorValidationException, IOException {
         return new DynamicSchema(FileDescriptorSet.parseFrom(schemaDescBuf));
     }
-
-    // --- public ---
 
     /**
      * Creates a new dynamic message builder for the given message type
@@ -138,8 +132,6 @@ public class DynamicSchema {
         return "types: " + msgTypes + "\n" + mFileDescSet;
     }
 
-    // --- private ---
-
     private DynamicSchema(FileDescriptorSet fileDescSet) throws DescriptorValidationException {
         mFileDescSet = fileDescSet;
         Map<String, FileDescriptor> fileDescMap = init(fileDescSet);
@@ -153,7 +145,6 @@ public class DynamicSchema {
         for (String msgName : msgDupes) mMsgDescriptorMapShort.remove(msgName);
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, FileDescriptor> init(FileDescriptorSet fileDescSet) throws DescriptorValidationException {
         // check for dupes
         Set<String> allFdProtoNames = new HashSet<>();
@@ -211,7 +202,6 @@ public class DynamicSchema {
      * DynamicSchema.Builder
      */
     public static class Builder {
-        // --- public ---
 
         /**
          * Builds a dynamic schema
@@ -239,8 +229,6 @@ public class DynamicSchema {
             mFileDescProtoBuilder.addMessageType(msgDef.getMessageType());
             return this;
         }
-
-        // --- private ---
 
         private Builder() {
             mFileDescProtoBuilder = FileDescriptorProto.newBuilder();

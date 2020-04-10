@@ -1,19 +1,24 @@
 // Copyright 2020 Zhenhua Yang
 // Licensed under the MIT License.
 
-package com.huaouo.stormy.stream;
+package com.huaouo.stormy.api.stream;
 
 import com.google.protobuf.Descriptors.DescriptorValidationException;
+import com.huaouo.stormy.api.util.SharedUtil;
 
 import java.util.HashMap;
 import java.util.Map;
 
-//@Slf4j TODO
 public class OutputStreamDeclarer {
-
+    private String streamIdPrefix;
     private Map<String, DynamicSchema> outputStreamSchemas = new HashMap<>();
 
-    public OutputStreamDeclarer declare(String stringId, Field... fields) {
+    public OutputStreamDeclarer(String streamIdPrefix) {
+        this.streamIdPrefix = streamIdPrefix;
+    }
+
+    public void addSchema(String streamId, Field... fields) {
+        SharedUtil.validateId(streamId);
         MessageDefinition.Builder msgDefBuilder = MessageDefinition.newBuilder("TupleData");
         for (Field f : fields) {
             msgDefBuilder.addField(f.fieldType, f.fieldName);
@@ -23,16 +28,12 @@ public class OutputStreamDeclarer {
             schema = DynamicSchema.newBuilder()
                     .addMessageDefinition(msgDefBuilder.build())
                     .build();
-        } catch (DescriptorValidationException e) {
-            // 预期不会抛出异常
-//            log.error(e.getDescription());
+        } catch (DescriptorValidationException ignored) {
         }
-        outputStreamSchemas.put(stringId, schema);
-        return this;
+        outputStreamSchemas.put(streamIdPrefix + "-" + streamId, schema);
     }
 
-    // TODO: 可见性
-    Map<String, DynamicSchema> getOutputStreamSchemas() {
+    public Map<String, DynamicSchema> getOutputStreamSchemas() {
         return outputStreamSchemas;
     }
 }

@@ -1,0 +1,8 @@
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    api 'io.grpc:grpc-stub:1.28.0'
+    api 'io.grpc:grpc-protobuf:1.28.0'
+}
