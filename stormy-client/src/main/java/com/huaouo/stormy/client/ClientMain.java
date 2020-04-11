@@ -3,12 +3,13 @@
 
 package com.huaouo.stormy.client;
 
-import com.huaouo.stormy.rpc.ManageTopologyRequest.RequestType;
+import com.huaouo.stormy.rpc.ManageTopologyRequestMetadata.RequestType;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.TimeUnit;
 
@@ -17,7 +18,7 @@ public class ClientMain {
     private static final int LACK_OF_ARGUMENTS = 2;
 
     public static void main(String[] args) throws Exception {
-        if (args.length == 0 || !args[0].matches("start|status|stop")) {
+        if (args.length == 0 || !args[0].matches("start|listRunning|stop")) {
             System.err.println("Usage:");
             System.err.println("  start <nimbus_ip> <jarFile> <topologyName>");
             System.err.println("  listRunning <nimbus_ip>");
@@ -25,7 +26,11 @@ public class ClientMain {
             System.exit(INVALID_COMMAND);
         }
 
-        String target = ":5000";
+        if (args.length < 2) {
+            System.err.println("Lack of arguments");
+            System.exit(LACK_OF_ARGUMENTS);
+        }
+        String target = args[1] + ":5000";
         RequestType requestType = RequestType.UNRECOGNIZED;
         InputStream jarFileStream = null;
         String topologyName = null;
@@ -37,17 +42,11 @@ public class ClientMain {
                     System.exit(LACK_OF_ARGUMENTS);
                 }
                 requestType = RequestType.START_TOPOLOGY;
-                target = args[1] + target;
                 jarFileStream = new FileInputStream(new File(args[2]));
                 topologyName = args[3];
                 break;
             case "listRunning":
-                if (args.length < 2) {
-                    System.err.println("Lack of arguments");
-                    System.exit(LACK_OF_ARGUMENTS);
-                }
                 requestType = RequestType.QUERY_RUNNING_TOPOLOGY;
-                target = args[1] + target;
                 break;
             case "stop":
                 if (args.length < 3) {
@@ -55,7 +54,6 @@ public class ClientMain {
                     System.exit(LACK_OF_ARGUMENTS);
                 }
                 requestType = RequestType.STOP_TOPOLOGY;
-                target = args[1] + target;
                 topologyName = args[2];
                 break;
         }
@@ -66,6 +64,8 @@ public class ClientMain {
         try {
             ManageTopologyClient client = new ManageTopologyClient(channel);
             System.out.println(client.manageTopology(requestType, topologyName, jarFileStream));
+        } catch (IOException | InterruptedException e) {
+            System.err.println("Failed while performing request:" + e.toString());
         } finally {
             if (jarFileStream != null) {
                 jarFileStream.close();

@@ -4,7 +4,7 @@ dependencies {
 }
 
 shadowJar {
-    archiveFileName.set("exmaple.jar")
+    archiveFileName.set("example.jar")
 
     manifest {
         attributes(

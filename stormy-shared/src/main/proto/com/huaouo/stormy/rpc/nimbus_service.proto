@@ -7,8 +7,7 @@ package com.huaouo.stormy.rpc;
 
 option java_multiple_files = true;
 
-message ManageTopologyRequest {
-
+message ManageTopologyRequestMetadata {
     enum RequestType {
         START_TOPOLOGY = 0;
         STOP_TOPOLOGY = 1;
@@ -17,7 +16,14 @@ message ManageTopologyRequest {
 
     RequestType request_type = 1;
     string topology_name = 2;
-    bytes jar_bytes = 3;
+}
+
+message ManageTopologyRequest {
+    oneof data {
+        // First message is metadata then jar_bytes if needed
+        ManageTopologyRequestMetadata metadata = 1;
+        bytes jar_bytes = 2;
+    }
 }
 
 message ManageTopologyResponse {
@@ -27,7 +33,7 @@ message ManageTopologyResponse {
 
 service ManageTopology {
 
-    rpc ManageTopology (ManageTopologyRequest) returns (ManageTopologyResponse) {
+    rpc ManageTopology (stream ManageTopologyRequest) returns (ManageTopologyResponse) {
     }
 }
 
@@ -36,14 +42,16 @@ message ProvideJarRequest {
 }
 
 message ProvideJarResponse {
-    bytes jar_bytes = 1;
-
-    // Error message, should only be set when error occurs
-    string message = 2;
+    oneof data {
+        // Leading messages are jar_bytes then a message if needed
+        bytes jar_bytes = 1;
+        // Error message, should only be set when error occurs
+        string message = 2;
+    }
 }
 
 service ProvideJar {
 
-    rpc ProvideJar (ProvideJarRequest) returns (ProvideJarResponse) {
+    rpc ProvideJar (ProvideJarRequest) returns (stream ProvideJarResponse) {
     }
 }

@@ -36,7 +36,7 @@ public class ProvideJarController extends ProvideJarImplBase {
         InputStream jarInputStream = null;
         ByteString jarBytes = null;
         try {
-            jarInputStream = jarService.readJarFile(topologyName);
+            jarInputStream = jarService.getInputStream(topologyName);
             jarBytes = ByteString.readFrom(jarInputStream);
         } catch (IOException e) {
             log.error(e.toString());

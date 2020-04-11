@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import javax.inject.Singleton;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -53,12 +54,12 @@ public class JarFileService {
     }
 
     // This method will overwrite jar file if exists.
-    public void writeJarFile(String fileBaseName, byte[] fileBytes) throws IOException {
+    public OutputStream getOutputStream(String fileBaseName) throws IOException {
         Path jarPath = masterDataPath.resolve(fileBaseName + ".jar");
-        Files.write(jarPath, fileBytes);
+        return Files.newOutputStream(jarPath);
     }
 
-    public InputStream readJarFile(String fileBaseName) throws IOException {
+    public InputStream getInputStream(String fileBaseName) throws IOException {
         Path jarPath = masterDataPath.resolve(fileBaseName + ".jar");
         return Files.newInputStream(jarPath);
     }
