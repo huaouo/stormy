@@ -7,8 +7,6 @@ import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
 public class Field {
-
-    FieldType fieldType;
-
     String fieldName;
+    FieldType fieldType;
 }

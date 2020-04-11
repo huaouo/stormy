@@ -3,11 +3,14 @@
 
 package com.huaouo.stormy.master.service;
 
-import com.huaouo.stormy.wrapper.ZooKeeperConnection;
+import com.huaouo.stormy.shared.util.SharedUtil;
+import com.huaouo.stormy.shared.wrapper.ZooKeeperConnection;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.zookeeper.CreateMode;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,11 +28,29 @@ public class ZooKeeperService {
     }
 
     public void init() {
-        zkConn.createIfNotExistsSync("/master", null);
+        if (zkConn.exists("/master/lock")) {
+            log.error("A master is already running");
+            System.exit(-1);
+        }
+
+        String masterAddr = null;
+        try {
+            masterAddr = SharedUtil.getIp() + ":5000";
+        } catch (IOException e) {
+            log.error("Cannot get host IP: " + e.toString());
+            System.exit(-1);
+        }
+
+        zkConn.createIfNotExistsSync("/master", masterAddr);
+        if (!masterAddr.equals(zkConn.getSync("/master"))) {
+            zkConn.setSync("/master", masterAddr);
+        }
+        zkConn.createIfNotExistsSync("/master/id", "0", CreateMode.EPHEMERAL);
+        zkConn.createIfNotExistsSync("/master/lock", null, CreateMode.EPHEMERAL);
         zkConn.createIfNotExistsSync("/master/topology", null);
-        zkConn.createIfNotExistsSync("/workers", null);
-        zkConn.createIfNotExistsSync("/workers/registered", null);
-        zkConn.createIfNotExistsSync("/workers/available", null);
+        zkConn.createIfNotExistsSync("/worker", null);
+        zkConn.createIfNotExistsSync("/worker/registered", null);
+        zkConn.createIfNotExistsSync("/worker/available", null);
     }
 
     public boolean topologyExists(String topologyName) {
@@ -37,7 +58,7 @@ public class ZooKeeperService {
     }
 
     public void registerTopology(String topologyName) {
-        zkConn.createIfNotExistsSync("/master/topology/" + topologyName, "RUN");
+        zkConn.createIfNotExistsSync("/master/topology/" + topologyName, "run");
     }
 
     public void deleteTopology(String topologyName) {
@@ -45,7 +66,7 @@ public class ZooKeeperService {
     }
 
     public void stopTopology(String topologyName) {
-        zkConn.setSync("/master/topology/" + topologyName, "STOP");
+        zkConn.setSync("/master/topology/" + topologyName, "stop");
     }
 
     public Map<String, String> getRunningTopologies() {
@@ -56,4 +77,13 @@ public class ZooKeeperService {
         }
         return result;
     }
+
+    public long generateId() {
+        long id = Long.parseLong(zkConn.getSync("/master/id"));
+        String newId = Long.toString(id + 1);
+        zkConn.setSync("/master/id", newId);
+        return id;
+    }
+
+
 }

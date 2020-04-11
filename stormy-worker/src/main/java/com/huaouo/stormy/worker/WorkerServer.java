@@ -3,8 +3,8 @@
 
 package com.huaouo.stormy.worker;
 
-import com.huaouo.stormy.util.SharedUtil;
-import com.huaouo.stormy.wrapper.ZooKeeperConnection;
+import com.huaouo.stormy.shared.util.SharedUtil;
+import com.huaouo.stormy.shared.wrapper.ZooKeeperConnection;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.CreateMode;
 
@@ -28,8 +28,13 @@ public class WorkerServer {
             System.exit(-1);
         }
 
-        zkConn.createIfNotExistsSync("/workers/registered/" + ip, null);
-        zkConn.createIfNotExistsSync("/workers/available/" + ip, null, CreateMode.EPHEMERAL);
+        if (zkConn.exists("/worker/available/" + ip)) {
+            log.error("A worker is already running on this node");
+            System.exit(-1);
+        }
+        zkConn.createIfNotExistsSync("/worker/registered/" + ip, null);
+        zkConn.createIfNotExistsSync("/worker/available/" + ip, null, CreateMode.EPHEMERAL);
+
     }
 
 

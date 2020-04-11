@@ -8,7 +8,7 @@ import com.huaouo.stormy.api.stream.OutputStreamDeclarer;
 import com.huaouo.stormy.api.stream.Tuple;
 
 public interface IBolt {
-    void compute(Tuple tuple, OutputCollector controller);
+    void compute(Tuple tuple, String sourceId, OutputCollector controller);
 
     void declareOutputStream(OutputStreamDeclarer declarer);
 }

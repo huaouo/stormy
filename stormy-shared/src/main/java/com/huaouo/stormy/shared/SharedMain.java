@@ -1,3 +1,8 @@
+// Copyright 2020 Zhenhua Yang
+// Licensed under the MIT License.
+
+package com.huaouo.stormy.shared;
+
 public class SharedMain {
     public static void main(String[] args) throws Exception {
 //        System.out.println(ByteString.readFrom(new ByteArrayInputStream(new byte[0])));

@@ -17,7 +17,7 @@ allprojects {
 
 subprojects {
     apply plugin: 'java'
-    if (project.name != 'stormy-shared') {
+    if (!project.name.endsWithAny('shared', 'api')) {
         apply plugin: 'com.github.johnrengelman.shadow'
     }
 
@@ -32,13 +32,8 @@ subprojects {
     dependencies {
         compileOnly 'org.projectlombok:lombok:1.18.12'
         annotationProcessor 'org.projectlombok:lombok:1.18.12'
-        implementation 'org.apache.commons:commons-lang3:3.9'
-        implementation('org.apache.zookeeper:zookeeper:3.6.0') {
-            exclude group: 'org.slf4j', module: 'slf4j-log4j12'
-        }
-
-        if (project.name != 'stormy-client' && project.name != 'stormy-api') {
-            if (project.name != 'stormy-shared') {
+        if (!project.name.endsWithAny('client', 'api', 'example')) {
+            if (!project.name.endsWith('shared')) {
                 implementation 'ch.qos.logback:logback-classic:1.2.3'
             }
             implementation 'com.google.inject:guice:4.2.2'
@@ -53,7 +48,7 @@ subprojects {
         useJUnitPlatform()
     }
 
-    if (project.name != 'stormy-api' && project.name != 'stormy-shared') {
+    if (project.name.endsWithAny('master', 'worker', 'client', 'ui')) {
         shadowJar {
             def projectSuffix = project.name.split('-')[1]
 

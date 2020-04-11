@@ -1,3 +1,14 @@
 dependencies {
-    implementation project(':stormy-shared')
+//    compileOnly project(':stormy-api')
+    implementation project(':stormy-api')
+}
+
+shadowJar {
+    archiveFileName.set("exmaple.jar")
+
+    manifest {
+        attributes(
+                'Main-Class': 'com.huaouo.stormy.example.ExampleTopology'
+        )
+    }
 }

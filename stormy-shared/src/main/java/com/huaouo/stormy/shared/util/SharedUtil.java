@@ -1,22 +1,17 @@
 // Copyright 2020 Zhenhua Yang
 // Licensed under the MIT License.
 
-package com.huaouo.stormy.util;
+package com.huaouo.stormy.shared.util;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.huaouo.stormy.GuiceModule;
-import org.apache.commons.lang3.RandomStringUtils;
+import com.huaouo.stormy.shared.GuiceModule;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Properties;
 
 public class SharedUtil {
-
-    public static String getRandomId() {
-        return RandomStringUtils.randomAlphanumeric(5);
-    }
 
     public static String getIp() throws IOException {
         Injector injector = Guice.createInjector(new GuiceModule());

@@ -5,7 +5,7 @@ package com.huaouo.stormy.worker;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.huaouo.stormy.GuiceModule;
+import com.huaouo.stormy.shared.GuiceModule;
 
 public class WorkerMain {
 

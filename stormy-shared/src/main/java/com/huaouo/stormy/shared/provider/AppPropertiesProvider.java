@@ -1,7 +1,7 @@
 // Copyright 2020 Zhenhua Yang
 // Licensed under the MIT License.
 
-package com.huaouo.stormy.provider;
+package com.huaouo.stormy.shared.provider;
 
 import lombok.extern.slf4j.Slf4j;
 

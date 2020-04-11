@@ -22,15 +22,12 @@ public class ExampleSpout implements ISpout {
 
     @Override
     public void declareOutputStream(OutputStreamDeclarer declarer) {
-        declarer.addSchema(
-                "target1",
-                new Field(FieldType.INT, "Id"),
-                new Field(FieldType.STRING, "Name")
-        );
-        declarer.addSchema(
-                "target2",
-                new Field(FieldType.STRING, "Email"),
-                new Field(FieldType.STRING, "Address")
-        );
+        declarer
+                .addSchema("target1",
+                        new Field("Id", FieldType.INT),
+                        new Field("Name", FieldType.STRING))
+                .addSchema("target2",
+                        new Field("Email", FieldType.STRING),
+                        new Field("Address", FieldType.STRING));
     }
 }

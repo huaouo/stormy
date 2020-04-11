@@ -9,6 +9,16 @@ import com.huaouo.stormy.api.topology.TopologyDefinition;
 public class ExampleTopology implements ITopology {
 
     @Override
-    public void defineTopology(TopologyDefinition topology) {
+    public TopologyDefinition defineTopology() {
+        return new TopologyDefinition.Builder()
+                .setSpout("spout", ExampleSpout.class, 1, 1)
+                .addBolt("baseBolt", ExampleBaseInfoBolt.class, 2, 2)
+                .addBolt("extendBolt", ExampleExtendInfoBolt.class, 2, 2)
+                .addBolt("outputBolt", ExampleOutputBolt.class, 1, 1)
+                .addStream("spout", "baseBolt", "target1")
+                .addStream("spout", "extendBolt", "target2")
+                .addStream("baseBolt", "outputBolt", "toOutput")
+                .addStream("extendBolt", "outputBolt", "toOutput")
+                .build();
     }
 }

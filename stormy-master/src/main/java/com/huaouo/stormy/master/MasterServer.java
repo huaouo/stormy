@@ -5,10 +5,9 @@ package com.huaouo.stormy.master;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.huaouo.stormy.GuiceModule;
+import com.huaouo.stormy.shared.GuiceModule;
 import com.huaouo.stormy.master.controller.ManageTopologyController;
 import com.huaouo.stormy.master.controller.ProvideJarController;
-import com.huaouo.stormy.wrapper.ZooKeeperConnection;
 import io.grpc.*;
 import lombok.extern.slf4j.Slf4j;
 
@@ -50,7 +49,6 @@ public class MasterServer {
             } catch (InterruptedException e) {
                 log.error(e.toString());
             }
-            cleanUpSingletonResources();
             log.info("Server shut down");
         }));
     }
@@ -58,7 +56,6 @@ public class MasterServer {
     public void stop() throws InterruptedException {
         if (server != null) {
             server.shutdown().awaitTermination(30, TimeUnit.SECONDS);
-            cleanUpSingletonResources();
             log.info("Server shut down");
         }
     }
@@ -66,15 +63,7 @@ public class MasterServer {
     public void blockUntilShutdown() throws InterruptedException {
         if (server != null) {
             server.awaitTermination();
-            cleanUpSingletonResources();
             log.info("Server shut down");
         }
-    }
-
-    private void cleanUpSingletonResources() {
-        log.info("Cleaning up global resources");
-        Injector injector = Guice.createInjector(new GuiceModule());
-
-        injector.getInstance(ZooKeeperConnection.class).close();
     }
 }

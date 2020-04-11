@@ -2,9 +2,9 @@ package com.huaouo.stormy.workerprocess;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.huaouo.stormy.GuiceModule;
+import com.huaouo.stormy.shared.GuiceModule;
 import com.huaouo.stormy.workerprocess.controller.TransmitTupleController;
-import com.huaouo.stormy.wrapper.ZooKeeperConnection;
+import com.huaouo.stormy.shared.wrapper.ZooKeeperConnection;
 import io.grpc.*;
 import lombok.extern.slf4j.Slf4j;
 

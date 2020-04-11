@@ -7,5 +7,5 @@ import com.huaouo.stormy.api.topology.TopologyDefinition;
 
 public interface ITopology {
 
-    void defineTopology(TopologyDefinition topology);
+    TopologyDefinition defineTopology();
 }
