@@ -5,11 +5,12 @@ package com.huaouo.stormy.example;
 
 import com.huaouo.stormy.api.ITopology;
 import com.huaouo.stormy.api.topology.TopologyDefinition;
+import com.huaouo.stormy.api.topology.TopologyException;
 
 public class ExampleTopology implements ITopology {
 
     @Override
-    public TopologyDefinition defineTopology() {
+    public TopologyDefinition defineTopology() throws TopologyException {
         return new TopologyDefinition.Builder()
                 .setSpout("spout", ExampleSpout.class, 1, 1)
                 .addBolt("baseBolt", ExampleBaseInfoBolt.class, 2, 2)

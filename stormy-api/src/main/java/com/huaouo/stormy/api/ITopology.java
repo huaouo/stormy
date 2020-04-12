@@ -4,8 +4,9 @@
 package com.huaouo.stormy.api;
 
 import com.huaouo.stormy.api.topology.TopologyDefinition;
+import com.huaouo.stormy.api.topology.TopologyException;
 
 public interface ITopology {
 
-    TopologyDefinition defineTopology();
+    TopologyDefinition defineTopology() throws TopologyException;
 }

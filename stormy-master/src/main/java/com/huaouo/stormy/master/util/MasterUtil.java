@@ -15,36 +15,5 @@ import java.util.jar.JarFile;
 
 public class MasterUtil {
 
-    public static String formatRunningTopologies(Map<String, String> runningTopologies) {
-        StringBuilder builder = new StringBuilder("Running topologies:\n");
-        boolean hasTopology = false;
-        for (Map.Entry<String, String> e : runningTopologies.entrySet()) {
-            if ("run".equals(e.getValue())) {
-                builder.append("  ");
-                builder.append(e.getKey());
-                builder.append("\n");
-                hasTopology = true;
-            }
-        }
-        if (!hasTopology) {
-            builder.append("  <none>\n");
-        }
-        return builder.toString();
-    }
 
-    private static final MethodType defineTopologyType =
-            MethodType.methodType(TopologyDefinition.class);
-
-    public static TopologyDefinition loadTopologyDefinition(URL jarLocalUrl) throws Throwable {
-        URL[] url = {jarLocalUrl};
-        Class<?> mainClass;
-        try (URLClassLoader loader = URLClassLoader.newInstance(url);
-             JarFile jarFile = new JarFile(jarLocalUrl.getFile())) {
-            String mainClassName = jarFile.getManifest().getMainAttributes().getValue("Main-Class");
-            mainClass = loader.loadClass(mainClassName);
-            MethodHandles.Lookup lookup = MethodHandles.lookup();
-            MethodHandle defineTopologyHandle = lookup.findVirtual(mainClass, "defineTopology", defineTopologyType);
-            return (TopologyDefinition) defineTopologyHandle.invoke(mainClass.newInstance());
-        }
-    }
 }

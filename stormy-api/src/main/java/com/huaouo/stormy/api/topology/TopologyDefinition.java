@@ -8,16 +8,15 @@ import com.huaouo.stormy.api.ISpout;
 import com.huaouo.stormy.api.util.ApiUtil;
 import lombok.Data;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Data
 public class TopologyDefinition {
     private Map<String, NodeDefinition> nodes = new HashMap<>();
-    private Map<String, EdgeDefinition> graph = new HashMap<>();
+    private Map<String, List<EdgeDefinition>> graph = new HashMap<>();
 
     private TopologyDefinition(Map<String, NodeDefinition> nodes,
-                               Map<String, EdgeDefinition> graph) {
+                               Map<String, List<EdgeDefinition>> graph) {
         this.nodes = nodes;
         this.graph = graph;
     }
@@ -26,8 +25,8 @@ public class TopologyDefinition {
         private String spoutId;
         // boltId || spoutId => NodeDefinition {className, isSpout, processNum, threadNumPerProcess}
         private Map<String, NodeDefinition> nodes = new HashMap<>();
-        // sourceId => EdgeDefinition {targetId, streamId}
-        private Map<String, EdgeDefinition> graph = new HashMap<>();
+        // sourceId => List<EdgeDefinition {targetId, streamId}>
+        private Map<String, List<EdgeDefinition>> graph = new HashMap<>();
 
         public TopologyDefinition.Builder setSpout(String spoutId, Class<? extends ISpout> spoutClass,
                                                    int processNum, int threadNumPerProcess) {
@@ -56,11 +55,17 @@ public class TopologyDefinition {
             ApiUtil.validateId(sourceId);
             ApiUtil.validateId(targetId);
             ApiUtil.validateId(streamId);
-            graph.put(sourceId, new EdgeDefinition(targetId, sourceId + "-" + streamId));
+            if (!graph.containsKey(sourceId)) {
+                graph.put(sourceId, new ArrayList<>());
+            }
+            graph.get(sourceId).add(new EdgeDefinition(targetId, sourceId + "-" + streamId));
             return this;
         }
 
-        public TopologyDefinition build() {
+        public TopologyDefinition build() throws TopologyException {
+            if (spoutId == null) {
+                throw new TopologyException("Missing spout");
+            }
             return new TopologyDefinition(nodes, graph);
         }
     }

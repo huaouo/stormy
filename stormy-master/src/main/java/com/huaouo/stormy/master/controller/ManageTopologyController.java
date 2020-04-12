@@ -6,12 +6,12 @@ package com.huaouo.stormy.master.controller;
 import com.huaouo.stormy.api.topology.TopologyDefinition;
 import com.huaouo.stormy.master.service.JarFileService;
 import com.huaouo.stormy.master.service.ZooKeeperService;
-import com.huaouo.stormy.master.util.MasterUtil;
+import com.huaouo.stormy.master.topology.TopologyLoader;
+import com.huaouo.stormy.rpc.ManageTopologyGrpc.ManageTopologyImplBase;
 import com.huaouo.stormy.rpc.ManageTopologyRequest;
 import com.huaouo.stormy.rpc.ManageTopologyRequestMetadata;
 import com.huaouo.stormy.rpc.ManageTopologyRequestMetadata.RequestType;
 import com.huaouo.stormy.rpc.ManageTopologyResponse;
-import com.huaouo.stormy.rpc.ManageTopologyGrpc.ManageTopologyImplBase;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,6 +20,7 @@ import javax.inject.Singleton;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
+import java.util.Map;
 
 @Slf4j
 @Singleton
@@ -123,6 +124,23 @@ public class ManageTopologyController extends ManageTopologyImplBase {
                 return null;
             }
 
+            private String formatRunningTopologies(Map<String, String> runningTopologies) {
+                StringBuilder builder = new StringBuilder("Running topologies:\n");
+                boolean hasTopology = false;
+                for (Map.Entry<String, String> e : runningTopologies.entrySet()) {
+                    if ("run".equals(e.getValue())) {
+                        builder.append("  ");
+                        builder.append(e.getKey());
+                        builder.append("\n");
+                        hasTopology = true;
+                    }
+                }
+                if (!hasTopology) {
+                    builder.append("  <none>\n");
+                }
+                return builder.toString();
+            }
+
             private void processRequest() {
                 switch (requestType) {
                     case START_TOPOLOGY:
@@ -134,14 +152,13 @@ public class ManageTopologyController extends ManageTopologyImplBase {
                         TopologyDefinition topology;
                         try {
                             URL jarLocalUrl = jarService.getJarFileUrl(topologyName);
-                            topology = MasterUtil.loadTopologyDefinition(jarLocalUrl);
+                            topology = new TopologyLoader().load(jarLocalUrl);
                         } catch (Throwable e) {
-                            e.printStackTrace();
                             message = "Unable to load topology definition: " + e.toString();
                             break;
                         }
 
-                        zkService.registerTopology(topologyName);
+                        zkService.startTopology(topologyName, topology);
                         // TODO: start topology
                         message = "Success";
                         break;
@@ -151,7 +168,7 @@ public class ManageTopologyController extends ManageTopologyImplBase {
                         message = "Success";
                         break;
                     case QUERY_RUNNING_TOPOLOGY:
-                        message = MasterUtil.formatRunningTopologies(zkService.getRunningTopologies());
+                        message = formatRunningTopologies(zkService.getRunningTopologies());
                         break;
                 }
             }
