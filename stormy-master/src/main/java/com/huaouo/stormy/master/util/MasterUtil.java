@@ -42,10 +42,9 @@ public class MasterUtil {
              JarFile jarFile = new JarFile(jarLocalUrl.getFile())) {
             String mainClassName = jarFile.getManifest().getMainAttributes().getValue("Main-Class");
             mainClass = loader.loadClass(mainClassName);
+            MethodHandles.Lookup lookup = MethodHandles.lookup();
+            MethodHandle defineTopologyHandle = lookup.findVirtual(mainClass, "defineTopology", defineTopologyType);
+            return (TopologyDefinition) defineTopologyHandle.invoke(mainClass.newInstance());
         }
-
-        MethodHandles.Lookup lookup = MethodHandles.lookup();
-        MethodHandle defineTopologyHandle = lookup.findVirtual(mainClass, "defineTopology", defineTopologyType);
-        return (TopologyDefinition) defineTopologyHandle.invoke(mainClass.newInstance());
     }
 }

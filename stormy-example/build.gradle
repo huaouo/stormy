@@ -1,6 +1,5 @@
 dependencies {
-//    compileOnly project(':stormy-api')
-    implementation project(':stormy-api')
+    compileOnly project(':stormy-api')
 }
 
 shadowJar {

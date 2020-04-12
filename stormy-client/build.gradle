@@ -1,3 +1,6 @@
 dependencies {
-    implementation project(':stormy-shared')
+    implementation(project(':stormy-shared')) {
+        exclude group: 'log4j', module: 'log4j'
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
 }

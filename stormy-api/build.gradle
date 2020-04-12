@@ -3,6 +3,5 @@ plugins {
 }
 
 dependencies {
-//    compileOnly 'io.grpc:grpc-protobuf:1.28.0'
-    api 'io.grpc:grpc-protobuf:1.28.0'
+    compileOnly 'io.grpc:grpc-protobuf:1.28.0'
 }
