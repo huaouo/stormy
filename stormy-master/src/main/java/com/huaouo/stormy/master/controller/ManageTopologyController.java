@@ -3,9 +3,10 @@
 
 package com.huaouo.stormy.master.controller;
 
-import com.huaouo.stormy.api.topology.TopologyDefinition;
+import com.google.common.collect.Lists;
 import com.huaouo.stormy.master.service.JarFileService;
 import com.huaouo.stormy.master.service.ZooKeeperService;
+import com.huaouo.stormy.master.topology.TaskDefinition;
 import com.huaouo.stormy.master.topology.TopologyLoader;
 import com.huaouo.stormy.rpc.ManageTopologyGrpc.ManageTopologyImplBase;
 import com.huaouo.stormy.rpc.ManageTopologyRequest;
@@ -149,16 +150,20 @@ public class ManageTopologyController extends ManageTopologyImplBase {
                             break;
                         }
 
-                        TopologyDefinition topology;
+                        Map<String, TaskDefinition> tasks;
                         try {
                             URL jarLocalUrl = jarService.getJarFileUrl(topologyName);
-                            topology = new TopologyLoader().load(jarLocalUrl);
+                            tasks = new TopologyLoader().load(jarLocalUrl);
                         } catch (Throwable e) {
+                            e.printStackTrace();
                             message = "Unable to load topology definition: " + e.toString();
                             break;
                         }
 
-                        zkService.startTopology(topologyName, topology);
+                        for (Map.Entry<String, TaskDefinition> e : Lists.reverse(Lists.newArrayList(tasks.entrySet()))) {
+                            System.out.println(e.getKey() + "  " + e.getValue());
+                        }
+                        zkService.startTopology(topologyName, tasks);
                         // TODO: start topology
                         message = "Success";
                         break;

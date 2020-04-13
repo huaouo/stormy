@@ -10,7 +10,6 @@ import com.huaouo.stormy.api.topology.NodeDefinition;
 import com.huaouo.stormy.api.topology.TopologyDefinition;
 import com.huaouo.stormy.api.topology.TopologyException;
 import lombok.AllArgsConstructor;
-import lombok.Data;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -28,18 +27,17 @@ public class TopologyLoader {
             MethodType.methodType(void.class, OutputStreamDeclarer.class);
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
 
-    private TopologyDefinition topology;
     private Map<String, NodeDefinition> nodes;
     private Map<String, List<EdgeDefinition>> graph;
 
-    public TopologyDefinition load(URL jarLocalUrl) throws Throwable {
+    // Return value: nodeId => TaskDefinition
+    public Map<String, TaskDefinition> load(URL jarLocalUrl) throws Throwable {
         URL[] url = {jarLocalUrl};
         try (URLClassLoader loader = URLClassLoader.newInstance(url)) {
             loadTopologyDefinition(loader, jarLocalUrl);
             String spoutId = validateTopology(loader);
-            detectCycleAndConnectivity(spoutId);
+            return detectCycleAndConnectivity(spoutId);
         }
-        return topology;
     }
 
     private void loadTopologyDefinition(URLClassLoader loader, URL jarLocalUrl) throws Throwable {
@@ -48,7 +46,7 @@ public class TopologyLoader {
             String mainClassName = jarFile.getManifest().getMainAttributes().getValue("Main-Class");
             mainClass = loader.loadClass(mainClassName);
             MethodHandle defineTopologyHandle = lookup.findVirtual(mainClass, "defineTopology", defineTopologyType);
-            topology = (TopologyDefinition) defineTopologyHandle.invoke(mainClass.newInstance());
+            TopologyDefinition topology = (TopologyDefinition) defineTopologyHandle.invoke(mainClass.newInstance());
             nodes = topology.getNodes();
             graph = topology.getGraph();
         }
@@ -107,7 +105,6 @@ public class TopologyLoader {
         return spoutId;
     }
 
-    @Data
     @AllArgsConstructor
     private static class DfsState {
         private String nodeId;
@@ -118,37 +115,54 @@ public class TopologyLoader {
         }
     }
 
-    private void detectCycleAndConnectivity(String spoutId) throws TopologyException {
-        // Refer to CLRS
-        Set<String> grayNodes = new HashSet<>();
-        Set<String> blackNodes = new HashSet<>();
-        grayNodes.add(spoutId);
+    // Refer to CLRS, returns a LinkedHashMap indicates the reversed
+    // topological order of nodes, which is nodeId => TaskDefinition
+    private Map<String, TaskDefinition> detectCycleAndConnectivity(String spoutId) throws TopologyException {
+        Map<String, TaskDefinition> grayNodes = new HashMap<>();
+        // Use LinkedHashMap because insertion order matters
+        Map<String, TaskDefinition> blackNodes = new LinkedHashMap<>();
+        grayNodes.put(spoutId, new TaskDefinition(nodes.get(spoutId), graph.get(spoutId)));
         Deque<DfsState> states = new ArrayDeque<>();
         states.push(new DfsState(spoutId, 0));
 
         while (!states.isEmpty()) {
             DfsState s = states.pop();
             List<EdgeDefinition> edges = graph.get(s.nodeId);
+            if (edges.size() <= s.edgeIndex) {
+                TaskDefinition t = grayNodes.get(s.nodeId);
+                grayNodes.remove(s.nodeId);
+                blackNodes.put(s.nodeId, t);
+                continue;
+            }
             String thisNode = edges.get(s.edgeIndex).getTargetId();
-            if (grayNodes.contains(thisNode)) {
+            if (grayNodes.containsKey(thisNode)) {
                 throw new TopologyException("Cycle detected in topology");
             }
-            if (s.edgeIndex < edges.size() - 1) {
+            if (s.edgeIndex < edges.size()) {
                 states.push(s.nextEdge());
-            } else {
-                grayNodes.remove(s.nodeId);
-                blackNodes.add(s.nodeId);
             }
+            if (blackNodes.containsKey(thisNode)) {
+                continue;
+            }
+
             if (graph.containsKey(thisNode)) {
-                grayNodes.add(thisNode);
+                grayNodes.put(thisNode, new TaskDefinition(nodes.get(thisNode), graph.get(thisNode)));
                 states.push(new DfsState(thisNode, 0));
             } else {
-                blackNodes.add(thisNode);
+                blackNodes.put(thisNode, new TaskDefinition(nodes.get(thisNode), new ArrayList<>()));
             }
         }
+
         if (blackNodes.size() != nodes.size()) {
             throw new TopologyException(
                     "Some nodes aren't connected with spout directly or indirectly");
         }
+
+        for (List<EdgeDefinition> l : graph.values()) {
+            for (EdgeDefinition e : l) {
+                blackNodes.get(e.getTargetId()).addInboundStream(e.getStreamId());
+            }
+        }
+        return blackNodes;
     }
 }
