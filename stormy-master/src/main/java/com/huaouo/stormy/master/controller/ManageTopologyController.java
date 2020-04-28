@@ -3,7 +3,6 @@
 
 package com.huaouo.stormy.master.controller;
 
-import com.google.common.collect.Lists;
 import com.huaouo.stormy.master.service.JarFileService;
 import com.huaouo.stormy.master.service.ZooKeeperService;
 import com.huaouo.stormy.master.topology.TaskDefinition;
@@ -160,9 +159,6 @@ public class ManageTopologyController extends ManageTopologyImplBase {
                             break;
                         }
 
-                        for (Map.Entry<String, TaskDefinition> e : Lists.reverse(Lists.newArrayList(tasks.entrySet()))) {
-                            System.out.println(e.getKey() + "  " + e.getValue());
-                        }
                         zkService.startTopology(topologyName, tasks);
                         // TODO: start topology
                         message = "Success";

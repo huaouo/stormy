@@ -32,8 +32,8 @@ public class WorkerServer {
             log.error("A worker is already running on this node");
             System.exit(-1);
         }
-        zkConn.createIfNotExistsSync("/worker/registered/" + ip, null);
-        zkConn.createIfNotExistsSync("/worker/available/" + ip, null, CreateMode.EPHEMERAL);
+        zkConn.createSync("/worker/registered/" + ip, null);
+        zkConn.createSync("/worker/available/" + ip, null, CreateMode.EPHEMERAL);
 
     }
 

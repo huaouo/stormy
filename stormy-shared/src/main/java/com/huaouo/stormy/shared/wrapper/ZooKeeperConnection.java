@@ -5,10 +5,7 @@ package com.huaouo.stormy.shared.wrapper;
 
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooDefs;
-import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.*;
 import org.apache.zookeeper.common.PathUtils;
 
 import java.util.List;
@@ -58,22 +55,23 @@ public class ZooKeeperConnection {
         return zk.exists(path, null) != null;
     }
 
-    public void createIfNotExistsSync(String path, String data) {
-        createIfNotExistsSync(path, data, CreateMode.PERSISTENT);
+    public boolean createSync(String path, String data) {
+        return createSync(path, data, CreateMode.PERSISTENT);
     }
 
-    // Do nothing if path exists
+    // return false if failed to create znode
     @SneakyThrows
-    public void createIfNotExistsSync(String path, String data, CreateMode createMode) {
-        if (exists(path)) {
-            return;
-        }
-
+    public boolean createSync(String path, String data, CreateMode createMode) {
         byte[] dataBytes = null;
         if (data != null) {
             dataBytes = data.getBytes();
         }
-        zk.create(path, dataBytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode);
+        try {
+            zk.create(path, dataBytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode);
+        } catch (KeeperException e) {
+            return false;
+        }
+        return true;
     }
 
     @SneakyThrows
