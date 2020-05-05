@@ -18,6 +18,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
 import java.util.jar.JarFile;
+import java.util.stream.IntStream;
 
 public class TopologyLoader {
 
@@ -30,14 +31,78 @@ public class TopologyLoader {
     private Map<String, NodeDefinition> nodes;
     private Map<String, List<EdgeDefinition>> graph;
 
-    // Return value: nodeId => TaskDefinition
-    public Map<String, TaskDefinition> load(URL jarLocalUrl) throws Throwable {
+    public ComputationGraph load(URL jarLocalUrl) throws Throwable {
         URL[] url = {jarLocalUrl};
         try (URLClassLoader loader = URLClassLoader.newInstance(url)) {
             loadTopologyDefinition(loader, jarLocalUrl);
             String spoutId = validateTopology(loader);
-            return detectCycleAndConnectivity(spoutId);
+            // nodeId => TaskDefinition
+            Map<String, TaskDefinition> tasks = detectCycleAndConnectivity(spoutId);
+            return new ComputationGraph(spoutId, tasks, augmentGraph());
         }
+    }
+
+    // convert a graph like A -> B(with 2 processes) -> C to A#0 -> B#0 -> C#0 plus A#0 -> B#1 -> C#0
+    private Map<TaskInstance, Set<TaskInstance>> augmentGraph() {
+        // instances associated to nodeId
+        Map<String, Set<TaskInstance>> instanceMap = new HashMap<>();
+        Map<TaskInstance, Set<TaskInstance>> retGraph = new HashMap<>();
+        List<String> sortedNodes = getReverseTopologicalOrder();
+        for (String n : sortedNodes) {
+            int processNum = nodes.get(n).getProcessNum();
+            Set<TaskInstance> nextInstances = new HashSet<>();
+            graph.get(n).stream() //edges
+                    .map(EdgeDefinition::getTargetId)
+                    .forEach(x -> {
+                        if (instanceMap.containsKey(x)) {
+                            nextInstances.addAll(instanceMap.get(x));
+                        }
+                    });
+            IntStream.range(0, processNum)
+                    .forEach(x -> retGraph.put(new TaskInstance(n, x), nextInstances));
+            instanceMap.put(n, nextInstances);
+        }
+
+        return retGraph;
+    }
+
+    private List<String> getReverseTopologicalOrder() {
+        Map<String, Integer> outboundEdgesCount = new HashMap<>();
+        Map<String, List<String>> prevNodeMap = new HashMap<>();
+        Queue<String> processQueue = new ArrayDeque<>();
+        for (Map.Entry<String, List<EdgeDefinition>> e : graph.entrySet()) {
+            if (e.getValue().isEmpty()) {
+                processQueue.add(e.getKey());
+            } else {
+                outboundEdgesCount.put(e.getKey(), e.getValue().size());
+            }
+
+            for (EdgeDefinition edge : e.getValue()) {
+                if (!prevNodeMap.containsKey(edge.getTargetId())) {
+                    prevNodeMap.put(edge.getTargetId(), new ArrayList<>());
+                }
+                prevNodeMap.get(edge.getTargetId()).add(e.getKey());
+            }
+        }
+
+        // reversed topological sorted
+        List<String> sorted = new ArrayList<>();
+        while (!processQueue.isEmpty()) {
+            String e = processQueue.poll();
+            sorted.add(e);
+            List<String> prevNodes = prevNodeMap.get(e);
+            for (String prevNode : prevNodes) {
+                int newValue = outboundEdgesCount.get(prevNode) - 1;
+                if (newValue == 0) {
+                    processQueue.add(prevNode);
+                    outboundEdgesCount.remove(prevNode);
+                } else {
+                    outboundEdgesCount.put(prevNode, newValue);
+                }
+            }
+        }
+
+        return sorted;
     }
 
     private void loadTopologyDefinition(URLClassLoader loader, URL jarLocalUrl) throws Throwable {
@@ -115,12 +180,10 @@ public class TopologyLoader {
         }
     }
 
-    // Refer to CLRS, returns a LinkedHashMap indicates the reversed
-    // topological order of nodes, which is nodeId => TaskDefinition
+    // Refer to CLRS, returns a Map, which maps nodeId => TaskDefinition
     private Map<String, TaskDefinition> detectCycleAndConnectivity(String spoutId) throws TopologyException {
         Map<String, TaskDefinition> grayNodes = new HashMap<>();
-        // Use LinkedHashMap because insertion order matters
-        Map<String, TaskDefinition> blackNodes = new LinkedHashMap<>();
+        Map<String, TaskDefinition> blackNodes = new HashMap<>();
         grayNodes.put(spoutId, new TaskDefinition(nodes.get(spoutId), graph.get(spoutId)));
         Deque<DfsState> states = new ArrayDeque<>();
         states.push(new DfsState(spoutId, 0));
@@ -128,18 +191,17 @@ public class TopologyLoader {
         while (!states.isEmpty()) {
             DfsState s = states.pop();
             List<EdgeDefinition> edges = graph.get(s.nodeId);
-            if (edges.size() <= s.edgeIndex) {
+            if (s.edgeIndex >= edges.size()) {
                 TaskDefinition t = grayNodes.get(s.nodeId);
                 grayNodes.remove(s.nodeId);
                 blackNodes.put(s.nodeId, t);
                 continue;
+            } else {
+                states.push(s.nextEdge());
             }
             String thisNode = edges.get(s.edgeIndex).getTargetId();
             if (grayNodes.containsKey(thisNode)) {
                 throw new TopologyException("Cycle detected in topology");
-            }
-            if (s.edgeIndex < edges.size()) {
-                states.push(s.nextEdge());
             }
             if (blackNodes.containsKey(thisNode)) {
                 continue;

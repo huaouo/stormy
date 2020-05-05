@@ -5,7 +5,7 @@ package com.huaouo.stormy.master.controller;
 
 import com.huaouo.stormy.master.service.JarFileService;
 import com.huaouo.stormy.master.service.ZooKeeperService;
-import com.huaouo.stormy.master.topology.TaskDefinition;
+import com.huaouo.stormy.master.topology.ComputationGraph;
 import com.huaouo.stormy.master.topology.TopologyLoader;
 import com.huaouo.stormy.rpc.ManageTopologyGrpc.ManageTopologyImplBase;
 import com.huaouo.stormy.rpc.ManageTopologyRequest;
@@ -142,35 +142,37 @@ public class ManageTopologyController extends ManageTopologyImplBase {
             }
 
             private void processRequest() {
-                switch (requestType) {
-                    case START_TOPOLOGY:
-                        if (zkService.topologyExists(topologyName)) {
-                            message = "Topology exists";
-                            break;
-                        }
+                synchronized (ManageTopologyController.class) {
+                    switch (requestType) {
+                        case START_TOPOLOGY:
+                            if (zkService.topologyExists(topologyName)) {
+                                message = "Topology exists";
+                                break;
+                            }
 
-                        Map<String, TaskDefinition> tasks;
-                        try {
-                            URL jarLocalUrl = jarService.getJarFileUrl(topologyName);
-                            tasks = new TopologyLoader().load(jarLocalUrl);
-                        } catch (Throwable e) {
-                            e.printStackTrace();
-                            message = "Unable to load topology definition: " + e.toString();
-                            break;
-                        }
+                            ComputationGraph cGraph;
+                            try {
+                                URL jarLocalUrl = jarService.getJarFileUrl(topologyName);
+                                cGraph = new TopologyLoader().load(jarLocalUrl);
+                            } catch (Throwable e) {
+                                e.printStackTrace();
+                                message = "Unable to load topology definition: " + e.toString();
+                                break;
+                            }
 
-                        zkService.startTopology(topologyName, tasks);
-                        // TODO: start topology
-                        message = "Success";
-                        break;
-                    case STOP_TOPOLOGY:
-                        zkService.stopTopology(topologyName);
-                        // TODO: add stop hook, delete zk entry and jar file
-                        message = "Success";
-                        break;
-                    case QUERY_RUNNING_TOPOLOGY:
-                        message = formatRunningTopologies(zkService.getRunningTopologies());
-                        break;
+                            zkService.startTopology(topologyName, cGraph);
+                            // TODO: start topology
+                            message = "Success";
+                            break;
+                        case STOP_TOPOLOGY:
+                            zkService.stopTopology(topologyName);
+                            // TODO: add stop hook, delete zk entry and jar file
+                            message = "Success";
+                            break;
+                        case QUERY_RUNNING_TOPOLOGY:
+                            message = formatRunningTopologies(zkService.getRunningTopologies());
+                            break;
+                    }
                 }
             }
         };

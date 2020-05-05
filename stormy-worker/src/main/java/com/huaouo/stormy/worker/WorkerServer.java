@@ -28,14 +28,10 @@ public class WorkerServer {
             System.exit(-1);
         }
 
-        if (zkConn.exists("/worker/available/" + ip)) {
+        zkConn.createSync("/worker/registered/" + ip, null);
+        if (!zkConn.createSync("/worker/available/" + ip, null, CreateMode.EPHEMERAL)) {
             log.error("A worker is already running on this node");
             System.exit(-1);
         }
-        zkConn.createSync("/worker/registered/" + ip, null);
-        zkConn.createSync("/worker/available/" + ip, null, CreateMode.EPHEMERAL);
-
     }
-
-
 }

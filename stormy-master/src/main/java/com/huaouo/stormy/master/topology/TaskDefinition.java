@@ -24,12 +24,10 @@ public class TaskDefinition {
         inboundStreamIds = new ArrayList<>();
         outboundStreamIds = outboundEdges.stream()
                 .map(EdgeDefinition::getStreamId)
-                .collect(Collectors.toCollection(ArrayList::new));
+                .collect(Collectors.toList());
     }
 
     public void addInboundStream(String inboundStreamId) {
         inboundStreamIds.add(inboundStreamId);
     }
-
-
 }

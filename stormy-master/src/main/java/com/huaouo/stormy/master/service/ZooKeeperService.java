@@ -3,7 +3,7 @@
 
 package com.huaouo.stormy.master.service;
 
-import com.huaouo.stormy.master.topology.TaskDefinition;
+import com.huaouo.stormy.master.topology.ComputationGraph;
 import com.huaouo.stormy.shared.util.SharedUtil;
 import com.huaouo.stormy.shared.wrapper.ZooKeeperConnection;
 import lombok.extern.slf4j.Slf4j;
@@ -15,8 +15,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
 @Singleton
@@ -59,7 +57,7 @@ public class ZooKeeperService {
         return zkConn.exists("/master/topology/" + topologyName);
     }
 
-    public void startTopology(String topologyName, Map<String, TaskDefinition> tasks) {
+    public void startTopology(String topologyName, ComputationGraph cGraph) {
         zkConn.createSync("/master/topology/" + topologyName, "run");
     }
 
