@@ -30,10 +30,11 @@ public class ZooKeeperConnection {
     // If znode doesn't exist, returns null
     @SneakyThrows
     public String getSync(String path) {
-        if (!exists(path)) {
+        try {
+            return new String(zk.getData(path, null, null));
+        } catch (Throwable ignored) {
             return null;
         }
-        return new String(zk.getData(path, null, null));
     }
 
     @SneakyThrows
@@ -68,7 +69,7 @@ public class ZooKeeperConnection {
         }
         try {
             zk.create(path, dataBytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, createMode);
-        } catch (KeeperException e) {
+        } catch (Throwable ignored) {
             return false;
         }
         return true;

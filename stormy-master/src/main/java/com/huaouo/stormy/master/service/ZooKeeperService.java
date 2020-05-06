@@ -4,17 +4,19 @@
 package com.huaouo.stormy.master.service;
 
 import com.huaouo.stormy.master.topology.ComputationGraph;
+import com.huaouo.stormy.master.topology.TaskDefinition;
 import com.huaouo.stormy.shared.util.SharedUtil;
 import com.huaouo.stormy.shared.wrapper.ZooKeeperConnection;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.CreateMode;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 @Slf4j
 @Singleton
@@ -57,8 +59,99 @@ public class ZooKeeperService {
         return zkConn.exists("/master/topology/" + topologyName);
     }
 
-    public void startTopology(String topologyName, ComputationGraph cGraph) {
+    @Data
+    private static class LoadInfo {
+        private String workerId;
+        private int threads;
+        private List<String> newAssignments = new ArrayList<>();
+
+        public LoadInfo(String workerId, int threads) {
+            this.workerId = workerId;
+            this.threads = threads;
+        }
+    }
+
+    public synchronized void startTopology(String topologyName, ComputationGraph cGraph) {
+        List<String> availableWorkers = zkConn.getChildrenSync("/worker/available");
+        if (availableWorkers.isEmpty()) {
+            throw new RuntimeException("No workers available");
+        }
+        AtomicInteger totalAssignedThreads = new AtomicInteger(cGraph.getTotalThreads());
+        Queue<LoadInfo> loadInfos = new PriorityQueue<>(Comparator.comparingInt(LoadInfo::getThreads));
+        availableWorkers.stream()
+                .map(x -> {
+                    String load = zkConn.getSync("/worker/registered/" + x);
+                    if (load != null) {
+                        int assignedThreads = Integer.parseInt(load);
+                        totalAssignedThreads.addAndGet(assignedThreads);
+                        return new LoadInfo(x, assignedThreads);
+                    }
+                    return null;
+                })
+                .filter(Objects::nonNull)
+                .forEach(loadInfos::add);
+        double avgThreads = (double) totalAssignedThreads.get() / loadInfos.size();
+        List<String> assignOrder = cGraph.getAssignOrder();
+        Map<String, TaskDefinition> tasks = cGraph.getTasks();
+
+        Function<String, String> encodeAssignment = taskName -> {
+            TaskDefinition taskDef = tasks.get(taskName);
+            String inboundStr = taskDef.getInboundStreamIds().stream()
+                    .map(x -> topologyName + "-" + x)
+                    .reduce("", (l, r) -> r + ";" + l);
+            String outboundStr = taskDef.getOutboundStreamIds().stream()
+                    .map(x -> topologyName + "-" + x)
+                    .reduce("", (l, r) -> r + ";" + l);
+            return topologyName + "#" + taskName + "#" + taskDef.getThreadsPerProcess()
+                    + "#" + inboundStr + "#" + outboundStr;
+        };
+
+        int tmpThreads = 0;
+        List<String> tmpInstances = new ArrayList<>();
+        for (int i = 0; i < assignOrder.size(); i++) {
+            String taskName = assignOrder.get(i);
+            if (taskName == null) {
+                continue; // ignore null separators
+            }
+            LoadInfo load = loadInfos.peek();
+            if (load == null) {
+                throw new RuntimeException("Internal Error: loadInfo.peek() == null");
+            }
+            int curThreads = tasks.get(taskName).getThreadsPerProcess();
+            if (tmpThreads + curThreads + load.getThreads() < avgThreads) {
+                tmpThreads += curThreads;
+                tmpInstances.add(encodeAssignment.apply(taskName));
+            } else {
+                double prevDelta = avgThreads - tmpThreads;
+                double curDelta = tmpThreads + curThreads - avgThreads;
+                if (prevDelta <= curDelta && tmpThreads != 0) {
+                    --i;
+                } else {
+                    tmpThreads += curThreads;
+                    tmpInstances.add(encodeAssignment.apply(taskName));
+                }
+                loadInfos.poll();
+                load.threads += tmpThreads;
+                load.newAssignments.addAll(tmpInstances);
+                loadInfos.add(load);
+                tmpThreads = 0;
+                tmpInstances.clear();
+            }
+        }
+
+        while (!loadInfos.isEmpty()) {
+            assignTask(loadInfos.poll());
+        }
+
         zkConn.createSync("/master/topology/" + topologyName, "run");
+    }
+
+    private void assignTask(LoadInfo load) {
+        String workerPath = "/worker/registered/" + load.getWorkerId();
+        zkConn.setSync(workerPath, Integer.toString(load.getThreads()));
+        for (String assignment : load.getNewAssignments()) {
+            zkConn.createSync(workerPath + "/" + assignment, null);
+        }
     }
 
     public void deleteTopology(String topologyName) {

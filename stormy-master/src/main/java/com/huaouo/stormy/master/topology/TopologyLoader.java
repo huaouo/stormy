@@ -18,6 +18,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
 import java.util.jar.JarFile;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class TopologyLoader {
@@ -38,12 +39,60 @@ public class TopologyLoader {
             String spoutId = validateTopology(loader);
             // nodeId => TaskDefinition
             Map<String, TaskDefinition> tasks = detectCycleAndConnectivity(spoutId);
-            return new ComputationGraph(spoutId, tasks, augmentGraph());
+            return new ComputationGraph(tasks, getAssignOrder(spoutId));
         }
     }
 
-    // convert a graph like A -> B(with 2 processes) -> C to A#0 -> B#0 -> C#0 plus A#0 -> B#1 -> C#0
-    private Map<TaskInstance, Set<TaskInstance>> augmentGraph() {
+    @AllArgsConstructor
+    private static class DfsState<T> {
+        private T key;
+        private int edgeIndex;
+
+        public DfsState<T> nextEdge() {
+            return new DfsState<>(key, edgeIndex + 1);
+        }
+    }
+
+    // Assign order of process, tasks with multiple process will appeared multiple
+    // times in the returned list. Null will be inserted between two task names if
+    // they are not adjacent in the DAG.
+    private List<String> getAssignOrder(String spoutId) {
+        List<String> retOrder = new ArrayList<>();
+        retOrder.add(spoutId);
+        Deque<DfsState<TaskInstance>> dfsStack = new ArrayDeque<>();
+        dfsStack.push(new DfsState<>(new TaskInstance(spoutId, 0), 0));
+        Map<TaskInstance, List<TaskInstance>> augmentedGraph = augmentGraph();
+
+        Set<TaskInstance> visited = new HashSet<>();
+        while (!dfsStack.isEmpty()) {
+            DfsState<TaskInstance> state = dfsStack.pop();
+            List<TaskInstance> edges = augmentedGraph.get(state.key);
+            if (state.edgeIndex < edges.size()) {
+                dfsStack.push(state.nextEdge());
+            } else {
+                continue;
+            }
+            TaskInstance thisInstance = edges.get(state.edgeIndex);
+            if (visited.contains(thisInstance)) {
+                retOrder.add(null);
+                continue;
+            }
+            visited.add(thisInstance);
+            retOrder.add(thisInstance.getNodeId());
+            List<TaskInstance> thisInstanceEdges = augmentedGraph.get(thisInstance);
+            if (thisInstanceEdges == null) {
+                retOrder.add(null);
+            } else {
+                dfsStack.push(new DfsState<>(thisInstance, 0));
+            }
+        }
+
+        return retOrder;
+    }
+
+    // Convert a graph like A -> B(with 2 processes) -> C to A#0 -> B#0 -> C#0 plus A#0 -> B#1 -> C#0.
+    // SpoutId#0 is the only instance ensured for spout.
+    private Map<TaskInstance, List<TaskInstance>> augmentGraph() {
         // instances associated to nodeId
         Map<String, Set<TaskInstance>> instanceMap = new HashMap<>();
         Map<TaskInstance, Set<TaskInstance>> retGraph = new HashMap<>();
@@ -51,31 +100,39 @@ public class TopologyLoader {
         for (String n : sortedNodes) {
             int processNum = nodes.get(n).getProcessNum();
             Set<TaskInstance> nextInstances = new HashSet<>();
-            graph.get(n).stream() //edges
-                    .map(EdgeDefinition::getTargetId)
-                    .forEach(x -> {
-                        if (instanceMap.containsKey(x)) {
-                            nextInstances.addAll(instanceMap.get(x));
-                        }
-                    });
-            IntStream.range(0, processNum)
-                    .forEach(x -> retGraph.put(new TaskInstance(n, x), nextInstances));
-            instanceMap.put(n, nextInstances);
+            if (graph.containsKey(n)) { // not end node of DAG
+                graph.get(n).stream() //edges
+                        .map(EdgeDefinition::getTargetId)
+                        .forEach(x -> {
+                            if (instanceMap.containsKey(x)) {
+                                nextInstances.addAll(instanceMap.get(x));
+                            }
+                        });
+                IntStream.range(0, processNum)
+                        .forEach(x -> retGraph.put(new TaskInstance(n, x), nextInstances));
+                instanceMap.put(n, nextInstances);
+            }
+
+            instanceMap.put(n, IntStream.range(0, processNum)
+                    .mapToObj(x -> new TaskInstance(n, x))
+                    .collect(Collectors.toSet()));
         }
 
-        return retGraph;
+        return retGraph.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, x -> new ArrayList<>(x.getValue())));
     }
 
     private List<String> getReverseTopologicalOrder() {
         Map<String, Integer> outboundEdgesCount = new HashMap<>();
         Map<String, List<String>> prevNodeMap = new HashMap<>();
         Queue<String> processQueue = new ArrayDeque<>();
-        for (Map.Entry<String, List<EdgeDefinition>> e : graph.entrySet()) {
-            if (e.getValue().isEmpty()) {
-                processQueue.add(e.getKey());
-            } else {
-                outboundEdgesCount.put(e.getKey(), e.getValue().size());
+        for (String nodeName : nodes.keySet()) {
+            if (!graph.containsKey(nodeName)) {
+                processQueue.add(nodeName);
             }
+        }
+        for (Map.Entry<String, List<EdgeDefinition>> e : graph.entrySet()) {
+            outboundEdgesCount.put(e.getKey(), e.getValue().size());
 
             for (EdgeDefinition edge : e.getValue()) {
                 if (!prevNodeMap.containsKey(edge.getTargetId())) {
@@ -90,14 +147,16 @@ public class TopologyLoader {
         while (!processQueue.isEmpty()) {
             String e = processQueue.poll();
             sorted.add(e);
-            List<String> prevNodes = prevNodeMap.get(e);
-            for (String prevNode : prevNodes) {
-                int newValue = outboundEdgesCount.get(prevNode) - 1;
-                if (newValue == 0) {
-                    processQueue.add(prevNode);
-                    outboundEdgesCount.remove(prevNode);
-                } else {
-                    outboundEdgesCount.put(prevNode, newValue);
+            if (prevNodeMap.containsKey(e)) {
+                List<String> prevNodes = prevNodeMap.get(e);
+                for (String prevNode : prevNodes) {
+                    int newValue = outboundEdgesCount.get(prevNode) - 1;
+                    if (newValue == 0) {
+                        processQueue.add(prevNode);
+                        outboundEdgesCount.remove(prevNode);
+                    } else {
+                        outboundEdgesCount.put(prevNode, newValue);
+                    }
                 }
             }
         }
@@ -170,31 +229,21 @@ public class TopologyLoader {
         return spoutId;
     }
 
-    @AllArgsConstructor
-    private static class DfsState {
-        private String nodeId;
-        private int edgeIndex;
-
-        public DfsState nextEdge() {
-            return new DfsState(nodeId, edgeIndex + 1);
-        }
-    }
-
     // Refer to CLRS, returns a Map, which maps nodeId => TaskDefinition
     private Map<String, TaskDefinition> detectCycleAndConnectivity(String spoutId) throws TopologyException {
         Map<String, TaskDefinition> grayNodes = new HashMap<>();
         Map<String, TaskDefinition> blackNodes = new HashMap<>();
         grayNodes.put(spoutId, new TaskDefinition(nodes.get(spoutId), graph.get(spoutId)));
-        Deque<DfsState> states = new ArrayDeque<>();
-        states.push(new DfsState(spoutId, 0));
+        Deque<DfsState<String>> states = new ArrayDeque<>();
+        states.push(new DfsState<>(spoutId, 0));
 
         while (!states.isEmpty()) {
-            DfsState s = states.pop();
-            List<EdgeDefinition> edges = graph.get(s.nodeId);
+            DfsState<String> s = states.pop();
+            List<EdgeDefinition> edges = graph.get(s.key);
             if (s.edgeIndex >= edges.size()) {
-                TaskDefinition t = grayNodes.get(s.nodeId);
-                grayNodes.remove(s.nodeId);
-                blackNodes.put(s.nodeId, t);
+                TaskDefinition t = grayNodes.get(s.key);
+                grayNodes.remove(s.key);
+                blackNodes.put(s.key, t);
                 continue;
             } else {
                 states.push(s.nextEdge());
@@ -209,7 +258,7 @@ public class TopologyLoader {
 
             if (graph.containsKey(thisNode)) {
                 grayNodes.put(thisNode, new TaskDefinition(nodes.get(thisNode), graph.get(thisNode)));
-                states.push(new DfsState(thisNode, 0));
+                states.push(new DfsState<>(thisNode, 0));
             } else {
                 blackNodes.put(thisNode, new TaskDefinition(nodes.get(thisNode), new ArrayList<>()));
             }

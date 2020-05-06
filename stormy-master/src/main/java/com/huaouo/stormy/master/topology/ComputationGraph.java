@@ -6,15 +6,21 @@ package com.huaouo.stormy.master.topology;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 @Data
 @AllArgsConstructor
 public class ComputationGraph {
-    private String spoutId;
     // nodeId => TaskDefinition
     private Map<String, TaskDefinition> tasks;
-    // nodeId#x => Set<nodeId#x>, ensure a spoutId#0 key exists
-    private Map<TaskInstance, Set<TaskInstance>> graph;
+    // Refer to TopologyLoader#getAssignOrder
+    private List<String> assignOrder;
+
+    public int getTotalThreads() {
+        return tasks.values().stream()
+                .mapToInt(t -> t.getProcessNum() * t.getThreadsPerProcess())
+                .sum();
+    }
 }

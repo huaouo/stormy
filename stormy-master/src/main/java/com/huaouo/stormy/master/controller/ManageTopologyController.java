@@ -150,18 +150,16 @@ public class ManageTopologyController extends ManageTopologyImplBase {
                                 break;
                             }
 
-                            ComputationGraph cGraph;
                             try {
                                 URL jarLocalUrl = jarService.getJarFileUrl(topologyName);
-                                cGraph = new TopologyLoader().load(jarLocalUrl);
+                                ComputationGraph cGraph = new TopologyLoader().load(jarLocalUrl);
+                                zkService.startTopology(topologyName, cGraph);
                             } catch (Throwable e) {
                                 e.printStackTrace();
-                                message = "Unable to load topology definition: " + e.toString();
+                                message = "Unable to start topology: " + e.toString();
                                 break;
                             }
 
-                            zkService.startTopology(topologyName, cGraph);
-                            // TODO: start topology
                             message = "Success";
                             break;
                         case STOP_TOPOLOGY:
