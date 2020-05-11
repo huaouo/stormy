@@ -8,8 +8,10 @@ import com.huaouo.stormy.master.topology.TaskDefinition;
 import com.huaouo.stormy.shared.util.SharedUtil;
 import com.huaouo.stormy.shared.wrapper.ZooKeeperConnection;
 import lombok.Data;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.Transaction;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -17,6 +19,8 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+
+import static org.apache.zookeeper.ZooDefs.Ids.OPEN_ACL_UNSAFE;
 
 @Slf4j
 @Singleton
@@ -39,20 +43,24 @@ public class ZooKeeperService {
             System.exit(-1);
         }
 
-        zkConn.createSync("/master", masterAddr);
-        if (!zkConn.createSync("/master/lock", null, CreateMode.EPHEMERAL)) {
+        zkConn.create("/master", masterAddr);
+        if (!zkConn.create("/master/lock", null, CreateMode.EPHEMERAL)) {
             log.error("A master is already running");
             System.exit(-1);
         }
-        if (!masterAddr.equals(zkConn.getSync("/master"))) {
-            zkConn.setSync("/master", masterAddr);
+        if (!masterAddr.equals(zkConn.get("/master"))) {
+            zkConn.set("/master", masterAddr);
         }
 
-        zkConn.createSync("/master/id", "0", CreateMode.EPHEMERAL);
-        zkConn.createSync("/master/topology", null);
-        zkConn.createSync("/worker", null);
-        zkConn.createSync("/worker/registered", null);
-        zkConn.createSync("/worker/available", null);
+        zkConn.create("/master/id", "0", CreateMode.EPHEMERAL);
+        zkConn.create("/master/topology", null);
+        zkConn.create("/worker", null);
+        // for task assignment, persistent children
+        zkConn.create("/worker/registered", null);
+        // for worker registration, ephemeral children
+        zkConn.create("/worker/available", null);
+        // for storing workers' data
+        zkConn.create("/worker/nodeData", null);
     }
 
     public boolean topologyExists(String topologyName) {
@@ -71,8 +79,9 @@ public class ZooKeeperService {
         }
     }
 
+    @SneakyThrows
     public synchronized void startTopology(String topologyName, ComputationGraph cGraph) {
-        List<String> availableWorkers = zkConn.getChildrenSync("/worker/available");
+        List<String> availableWorkers = zkConn.getChildren("/worker/available");
         if (availableWorkers.isEmpty()) {
             throw new RuntimeException("No workers available");
         }
@@ -80,7 +89,7 @@ public class ZooKeeperService {
         Queue<LoadInfo> loadInfos = new PriorityQueue<>(Comparator.comparingInt(LoadInfo::getThreads));
         availableWorkers.stream()
                 .map(x -> {
-                    String load = zkConn.getSync("/worker/registered/" + x);
+                    String load = zkConn.get("/worker/registered/" + x);
                     if (load != null) {
                         int assignedThreads = Integer.parseInt(load);
                         totalAssignedThreads.addAndGet(assignedThreads);
@@ -94,6 +103,7 @@ public class ZooKeeperService {
         List<String> assignOrder = cGraph.getAssignOrder();
         Map<String, TaskDefinition> tasks = cGraph.getTasks();
 
+        Map<String, Integer> encodeHelper = new HashMap<>();
         Function<String, String> encodeAssignment = taskName -> {
             TaskDefinition taskDef = tasks.get(taskName);
             String inboundStr = taskDef.getInboundStreamIds().stream()
@@ -102,7 +112,12 @@ public class ZooKeeperService {
             String outboundStr = taskDef.getOutboundStreamIds().stream()
                     .map(x -> topologyName + "-" + x)
                     .reduce("", (l, r) -> r + ";" + l);
-            return topologyName + "#" + taskName + "#" + taskDef.getThreadsPerProcess()
+            if (!encodeHelper.containsKey(taskName)) {
+                encodeHelper.put(taskName, -1);
+            }
+            int processIndex = encodeHelper.get(taskName) + 1;
+            encodeHelper.put(taskName, processIndex);
+            return topologyName + "#" + taskName + "#" + processIndex
                     + "#" + inboundStr + "#" + outboundStr;
         };
 
@@ -139,42 +154,40 @@ public class ZooKeeperService {
             }
         }
 
+        Transaction txn = zkConn.transaction();
         while (!loadInfos.isEmpty()) {
-            assignTask(loadInfos.poll());
+            LoadInfo load = loadInfos.poll();
+            String workerPath = "/worker/registered/" + load.getWorkerId();
+            txn.setData(workerPath, Integer.toString(load.getThreads()).getBytes(), -1);
+            for (String assignment : load.getNewAssignments()) {
+                txn.create(workerPath + "/" + assignment, null, OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            }
         }
-
-        zkConn.createSync("/master/topology/" + topologyName, "run");
-    }
-
-    private void assignTask(LoadInfo load) {
-        String workerPath = "/worker/registered/" + load.getWorkerId();
-        zkConn.setSync(workerPath, Integer.toString(load.getThreads()));
-        for (String assignment : load.getNewAssignments()) {
-            zkConn.createSync(workerPath + "/" + assignment, null);
-        }
+        txn.create("/master/topology/" + topologyName, "run".getBytes(), OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        txn.commit();
     }
 
     public void deleteTopology(String topologyName) {
-        zkConn.deleteRecursiveSync(topologyName);
+        zkConn.deleteRecursive(topologyName);
     }
 
     public void stopTopology(String topologyName) {
-        zkConn.setSync("/master/topology/" + topologyName, "stop");
+        zkConn.set("/master/topology/" + topologyName, "stop");
     }
 
     public Map<String, String> getRunningTopologies() {
-        List<String> topologyNames = zkConn.getChildrenSync("/master/topology");
+        List<String> topologyNames = zkConn.getChildren("/master/topology");
         Map<String, String> result = new HashMap<>();
         for (String name : topologyNames) {
-            result.put(name, zkConn.getSync("/master/topology/" + name));
+            result.put(name, zkConn.get("/master/topology/" + name));
         }
         return result;
     }
 
     public long generateId() {
-        long id = Long.parseLong(zkConn.getSync("/master/id"));
+        long id = Long.parseLong(zkConn.get("/master/id"));
         String newId = Long.toString(id + 1);
-        zkConn.setSync("/master/id", newId);
+        zkConn.set("/master/id", newId);
         return id;
     }
 }

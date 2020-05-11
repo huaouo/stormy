@@ -19,6 +19,10 @@ public class ZooKeeperConnection {
         this.zk = zk;
     }
 
+    public Transaction transaction() {
+        return zk.transaction();
+    }
+
     public void close() {
         try {
             zk.close();
@@ -29,7 +33,7 @@ public class ZooKeeperConnection {
 
     // If znode doesn't exist, returns null
     @SneakyThrows
-    public String getSync(String path) {
+    public String get(String path) {
         try {
             return new String(zk.getData(path, null, null));
         } catch (Throwable ignored) {
@@ -38,12 +42,7 @@ public class ZooKeeperConnection {
     }
 
     @SneakyThrows
-    public void getAsync(String path, Watcher watcher) {
-        zk.getData(path, watcher, null);
-    }
-
-    @SneakyThrows
-    public void setSync(String path, String data) {
+    public void set(String path, String data) {
         byte[] dataBytes = null;
         if (data != null) {
             dataBytes = data.getBytes();
@@ -56,13 +55,13 @@ public class ZooKeeperConnection {
         return zk.exists(path, null) != null;
     }
 
-    public boolean createSync(String path, String data) {
-        return createSync(path, data, CreateMode.PERSISTENT);
+    public boolean create(String path, String data) {
+        return create(path, data, CreateMode.PERSISTENT);
     }
 
     // return false if failed to create znode
     @SneakyThrows
-    public boolean createSync(String path, String data, CreateMode createMode) {
+    public boolean create(String path, String data, CreateMode createMode) {
         byte[] dataBytes = null;
         if (data != null) {
             dataBytes = data.getBytes();
@@ -76,26 +75,31 @@ public class ZooKeeperConnection {
     }
 
     @SneakyThrows
-    public List<String> getChildrenSync(String path) {
+    public List<String> getChildren(String path) {
         return zk.getChildren(path, false);
     }
 
     @SneakyThrows
-    public void deleteSync(String path) {
+    public void delete(String path) {
         zk.delete(path, -1);
     }
 
     @SneakyThrows
-    public void deleteRecursiveSync(String path) {
+    public void deleteRecursive(String path) {
         PathUtils.validatePath(path);
 
-        List<String> children = getChildrenSync(path);
+        List<String> children = getChildren(path);
         if (children.isEmpty()) {
-            deleteSync(path);
+            delete(path);
         } else {
             for (String c : children) {
-                deleteRecursiveSync(path + "/" + c);
+                deleteRecursive(path + "/" + c);
             }
         }
+    }
+
+    @SneakyThrows
+    public void addWatch(String path, Watcher watcher) {
+        zk.addWatch(path, watcher, AddWatchMode.PERSISTENT);
     }
 }

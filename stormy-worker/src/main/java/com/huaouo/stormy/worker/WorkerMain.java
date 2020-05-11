@@ -12,6 +12,6 @@ public class WorkerMain {
     public static void main(String[] args) {
         Injector injector = Guice.createInjector(new GuiceModule());
         final WorkerServer server = injector.getInstance(WorkerServer.class);
-        server.start();
+        server.startAndBlock();
     }
 }
