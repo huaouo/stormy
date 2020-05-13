@@ -32,10 +32,17 @@ public class ZooKeeperConnection {
     }
 
     // If znode doesn't exist, returns null
-    @SneakyThrows
     public String get(String path) {
         try {
             return new String(zk.getData(path, null, null));
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    public byte[] getBytesAndWatch(String path, Watcher watcher) {
+        try {
+            return zk.getData(path, watcher, null);
         } catch (Throwable ignored) {
             return null;
         }

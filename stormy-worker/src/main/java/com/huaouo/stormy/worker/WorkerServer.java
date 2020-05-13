@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.LockSupport;
 
 @Slf4j
 @Singleton
@@ -57,6 +58,7 @@ public class WorkerServer {
         acceptedTasksPath = nodeDataPath + "/accepted";
         zkConn.create(registeredPath, "0");
         zkConn.create(nodeDataPath, null);
+        zkConn.create(nodeDataPath + "/accepted", null);
         if (!zkConn.create("/worker/available/" + ip, null, CreateMode.EPHEMERAL)) {
             log.error("A worker is already running on this node");
             System.exit(-1);
@@ -74,13 +76,7 @@ public class WorkerServer {
         // TODO: add restart logic for worker process
 
         // Block
-        synchronized (this) {
-            try {
-                this.wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+        LockSupport.park();
     }
 
     private void initGrpcClient(String target) {
@@ -109,9 +105,10 @@ public class WorkerServer {
         // [0] => topologyName
         // [1] => taskName
         // [2] => processIndex
-        // [3] => inboundStr
-        // [4] => outboundStr
-        String[] taskInfo = taskFullName.split("#");
+        // [3] => threadNum
+        // [4] => inboundStr
+        // [5] => outboundStr
+        String[] taskInfo = taskFullName.split("#", -1);
         String topologyName = taskInfo[0];
 
         String jarPath = null;
