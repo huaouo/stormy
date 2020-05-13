@@ -28,6 +28,8 @@ public class TaskDefinition {
     }
 
     public void addInboundStream(String inboundStreamId) {
-        inboundStreamIds.add(inboundStreamId);
+        if (!inboundStreamIds.contains(inboundStreamId)) {
+            inboundStreamIds.add(inboundStreamId);
+        }
     }
 }

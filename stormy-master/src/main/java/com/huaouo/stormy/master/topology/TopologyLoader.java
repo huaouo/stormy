@@ -3,7 +3,9 @@
 
 package com.huaouo.stormy.master.topology;
 
+import com.huaouo.stormy.api.IOperator;
 import com.huaouo.stormy.api.ISpout;
+import com.huaouo.stormy.api.ITopology;
 import com.huaouo.stormy.api.stream.OutputStreamDeclarer;
 import com.huaouo.stormy.api.topology.EdgeDefinition;
 import com.huaouo.stormy.api.topology.NodeDefinition;
@@ -11,9 +13,6 @@ import com.huaouo.stormy.api.topology.TopologyDefinition;
 import com.huaouo.stormy.api.topology.TopologyException;
 import lombok.AllArgsConstructor;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
@@ -23,20 +22,14 @@ import java.util.stream.IntStream;
 
 public class TopologyLoader {
 
-    private static final MethodType defineTopologyType =
-            MethodType.methodType(TopologyDefinition.class);
-    private static final MethodType declareOutputStreamType =
-            MethodType.methodType(void.class, OutputStreamDeclarer.class);
-    private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
-
     private Map<String, NodeDefinition> nodes;
     private Map<String, List<EdgeDefinition>> graph;
 
-    public ComputationGraph load(URL jarLocalUrl) throws Throwable {
+    public ComputationGraph load(String topologyName, URL jarLocalUrl) throws Throwable {
         URL[] url = {jarLocalUrl};
         try (URLClassLoader loader = URLClassLoader.newInstance(url)) {
-            loadTopologyDefinition(loader, jarLocalUrl);
-            String spoutId = validateTopology(loader);
+            loadTopologyDefinition(topologyName, loader, jarLocalUrl);
+            String spoutId = validateTopology(topologyName, loader);
             // nodeId => TaskDefinition
             Map<String, TaskDefinition> tasks = detectCycleAndConnectivity(spoutId);
             return new ComputationGraph(tasks, getAssignOrder(spoutId));
@@ -164,19 +157,22 @@ public class TopologyLoader {
         return sorted;
     }
 
-    private void loadTopologyDefinition(URLClassLoader loader, URL jarLocalUrl) throws Throwable {
+    private void loadTopologyDefinition(String topologyName, URLClassLoader loader, URL jarLocalUrl) throws Throwable {
         Class<?> mainClass;
         try (JarFile jarFile = new JarFile(jarLocalUrl.getFile())) {
             String mainClassName = jarFile.getManifest().getMainAttributes().getValue("Main-Class");
             mainClass = loader.loadClass(mainClassName);
-            MethodHandle defineTopologyHandle = lookup.findVirtual(mainClass, "defineTopology", defineTopologyType);
-            TopologyDefinition topology = (TopologyDefinition) defineTopologyHandle.invoke(mainClass.newInstance());
+            TopologyDefinition topology = ((ITopology) mainClass.newInstance()).defineTopology();
             nodes = topology.getNodes();
             graph = topology.getGraph();
+
+            // add "topologyName-" prefix for streamId
+            graph.values().forEach(li ->
+                    li.forEach(edge -> edge.setStreamId(topologyName + "-" + edge.getStreamId())));
         }
     }
 
-    private String validateTopology(URLClassLoader loader) throws Throwable {
+    private String validateTopology(String topologyName, URLClassLoader loader) throws Throwable {
         String spoutId = null;
         for (Map.Entry<String, List<EdgeDefinition>> e : graph.entrySet()) {
             String sourceId = e.getKey();
@@ -185,10 +181,8 @@ public class TopologyLoader {
             if (ISpout.class.isAssignableFrom(sourceClass)) {
                 spoutId = sourceId;
             }
-            MethodHandle declareOutputStreamHandle = lookup.findVirtual(sourceClass,
-                    "declareOutputStream", declareOutputStreamType);
-            OutputStreamDeclarer declarer = new OutputStreamDeclarer(sourceId);
-            declareOutputStreamHandle.invoke(sourceClass.newInstance(), declarer);
+            OutputStreamDeclarer declarer = new OutputStreamDeclarer(topologyName, sourceId);
+            ((IOperator) sourceClass.newInstance()).declareOutputStream(declarer);
             Set<String> schemaNames = declarer.getOutputStreamSchemas().keySet();
             if (schemaNames.size() != e.getValue().size()) {
                 throw new Exception("Number of schemas defined in '" + sourceId
@@ -266,12 +260,16 @@ public class TopologyLoader {
 
         if (blackNodes.size() != nodes.size()) {
             throw new TopologyException(
-                    "Some nodes aren't connected with spout directly or indirectly");
+                    "Some operators aren't connected with spout directly or indirectly");
         }
 
         for (List<EdgeDefinition> l : graph.values()) {
             for (EdgeDefinition e : l) {
-                blackNodes.get(e.getTargetId()).addInboundStream(e.getStreamId());
+                TaskDefinition t = blackNodes.get(e.getTargetId());
+                t.addInboundStream(e.getStreamId());
+                if (t.getInboundStreamIds().size() != 1) {
+                    throw new TopologyException("Only one inbound stream is allowed for each operator");
+                }
             }
         }
         return blackNodes;

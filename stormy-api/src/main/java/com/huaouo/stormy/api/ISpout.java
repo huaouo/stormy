@@ -4,10 +4,8 @@
 package com.huaouo.stormy.api;
 
 import com.huaouo.stormy.api.stream.OutputCollector;
-import com.huaouo.stormy.api.stream.OutputStreamDeclarer;
 
-public interface ISpout {
+public interface ISpout extends IOperator {
+
     void nextTuple(OutputCollector collector);
-    
-    void declareOutputStream(OutputStreamDeclarer declarer);
 }

@@ -4,11 +4,9 @@
 package com.huaouo.stormy.api;
 
 import com.huaouo.stormy.api.stream.OutputCollector;
-import com.huaouo.stormy.api.stream.OutputStreamDeclarer;
 import com.huaouo.stormy.api.stream.Tuple;
 
-public interface IBolt {
-    void compute(Tuple tuple, OutputCollector controller);
+public interface IBolt extends IOperator {
 
-    void declareOutputStream(OutputStreamDeclarer declarer);
+    void compute(Tuple tuple, OutputCollector controller);
 }

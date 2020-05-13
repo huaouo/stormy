@@ -10,5 +10,7 @@ import lombok.Data;
 @AllArgsConstructor
 public class EdgeDefinition {
     private String targetId;
+    // This streamId is "taskName-realStreamId", different from the one returned
+    // by OutputStreamDeclarer#getOutputStreamSchemas, which is "topologyName-taskName-realStreamId"
     private String streamId;
 }

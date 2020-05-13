@@ -13,9 +13,8 @@ public class OutputStreamDeclarer {
     private String streamIdPrefix;
     private Map<String, DynamicSchema> outputStreamSchemas = new HashMap<>();
 
-    // streamIdPrefix should be spoutId or boltId
-    public OutputStreamDeclarer(String streamIdPrefix) {
-        this.streamIdPrefix = streamIdPrefix;
+    public OutputStreamDeclarer(String topologyName, String taskName) {
+        this.streamIdPrefix = topologyName + "-" + taskName;
     }
 
     public OutputStreamDeclarer addSchema(String streamId, Field... fields) {

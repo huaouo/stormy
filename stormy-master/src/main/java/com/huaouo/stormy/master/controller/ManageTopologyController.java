@@ -152,7 +152,7 @@ public class ManageTopologyController extends ManageTopologyImplBase {
 
                             try {
                                 URL jarLocalUrl = jarService.getJarFileUrl(topologyName);
-                                ComputationGraph cGraph = new TopologyLoader().load(jarLocalUrl);
+                                ComputationGraph cGraph = new TopologyLoader().load(topologyName, jarLocalUrl);
                                 zkService.startTopology(topologyName, cGraph);
                             } catch (Throwable e) {
                                 e.printStackTrace();

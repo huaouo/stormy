@@ -61,6 +61,7 @@ public class ZooKeeperService {
         zkConn.create("/worker/available", null);
         // for storing workers' data
         zkConn.create("/worker/nodeData", null);
+        zkConn.create("/stream", null);
     }
 
     public boolean topologyExists(String topologyName) {
@@ -106,19 +107,18 @@ public class ZooKeeperService {
         Map<String, Integer> encodeHelper = new HashMap<>();
         Function<String, String> encodeAssignment = taskName -> {
             TaskDefinition taskDef = tasks.get(taskName);
+            int threadNum = taskDef.getThreadsPerProcess();
             String inboundStr = taskDef.getInboundStreamIds().stream()
-                    .map(x -> topologyName + "-" + x)
                     .reduce("", (l, r) -> r + ";" + l);
             String outboundStr = taskDef.getOutboundStreamIds().stream()
-                    .map(x -> topologyName + "-" + x)
                     .reduce("", (l, r) -> r + ";" + l);
             if (!encodeHelper.containsKey(taskName)) {
                 encodeHelper.put(taskName, -1);
             }
             int processIndex = encodeHelper.get(taskName) + 1;
             encodeHelper.put(taskName, processIndex);
-            return topologyName + "#" + taskName + "#" + processIndex
-                    + "#" + inboundStr + "#" + outboundStr;
+            return topologyName + "#" + taskName + "#" + processIndex + "#" + threadNum +
+                    "#" + inboundStr + "#" + outboundStr;
         };
 
         int tmpThreads = 0;
