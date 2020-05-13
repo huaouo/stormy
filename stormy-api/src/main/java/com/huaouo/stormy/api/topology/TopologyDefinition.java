@@ -21,12 +21,19 @@ public class TopologyDefinition {
         this.graph = graph;
     }
 
+    public static Builder newBuilder() {
+        return new Builder();
+    }
+
     public static class Builder {
         private String spoutId;
         // boltId || spoutId => NodeDefinition {className, isSpout, processNum, threadNumPerProcess}
         private Map<String, NodeDefinition> nodes = new HashMap<>();
         // sourceId => List<EdgeDefinition {targetId, streamId}>
         private Map<String, List<EdgeDefinition>> graph = new HashMap<>();
+
+        private Builder() {
+        }
 
         public TopologyDefinition.Builder setSpout(String spoutId, Class<? extends ISpout> spoutClass,
                                                    int processNum, int threadNumPerProcess) {
@@ -35,7 +42,7 @@ public class TopologyDefinition {
                 nodes.remove(this.spoutId);
             }
             this.spoutId = spoutId;
-            nodes.put(spoutId, new NodeDefinition(spoutClass.getName(),
+            nodes.put(spoutId, new NodeDefinition(spoutClass.getCanonicalName(),
                     true, processNum, threadNumPerProcess));
             return this;
         }
@@ -46,7 +53,7 @@ public class TopologyDefinition {
             if (spoutId != null && spoutId.equals(boltId)) {
                 throw new IllegalArgumentException("boltId shouldn't be same as spoutId");
             }
-            nodes.put(boltId, new NodeDefinition(boltClass.getName(),
+            nodes.put(boltId, new NodeDefinition(boltClass.getCanonicalName(),
                     false, processNum, threadNumPerProcess));
             return this;
         }

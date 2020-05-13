@@ -9,15 +9,12 @@ import com.huaouo.stormy.api.stream.*;
 public class ExampleExtendInfoBolt implements IBolt {
 
     @Override
-    public void compute(Tuple tuple, String sourceId, OutputCollector controller) {
+    public void compute(Tuple tuple, OutputCollector controller) {
         System.out.print("Email: " + tuple.getIntByName("Email"));
         System.out.println("Address: " + tuple.getStringByName("Address"));
     }
 
     @Override
     public void declareOutputStream(OutputStreamDeclarer declarer) {
-        declarer.addSchema("toOutput",
-                new Field("Email", FieldType.STRING),
-                new Field("Address", FieldType.STRING));
     }
 }

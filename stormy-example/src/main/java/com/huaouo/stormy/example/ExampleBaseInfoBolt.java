@@ -9,9 +9,8 @@ import com.huaouo.stormy.api.IBolt;
 public class ExampleBaseInfoBolt implements IBolt {
 
     @Override
-    public void compute(Tuple tuple, String sourceId, OutputCollector collector) {
-        System.out.print("Id: " + tuple.getIntByName("Id"));
-        System.out.println("Name: " + tuple.getStringByName("Name"));
+    public void compute(Tuple tuple, OutputCollector collector) {
+        collector.emit("toOutput", tuple.getStringByName("Id"), tuple.getStringByName("Name"));
     }
 
     @Override

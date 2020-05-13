@@ -11,18 +11,12 @@ import com.huaouo.stormy.api.stream.Tuple;
 public class ExampleOutputBolt implements IBolt {
 
     @Override
-    public void compute(Tuple tuple, String sourceId, OutputCollector controller) {
-        if ("baseBolt".equals(sourceId)) {
-            System.out.println("Id: " + tuple.getIntByName("Id"));
-            System.out.println("Name: " + tuple.getStringByName("Name"));
-        } else { // "extendBolt".equals(sourceId)
-            System.out.println("Email: " + tuple.getStringByName("Email"));
-            System.out.println("Address: " + tuple.getStringByName("Address"));
-        }
+    public void compute(Tuple tuple, OutputCollector controller) {
+        System.out.println("Id: " + tuple.getIntByName("Id"));
+        System.out.println("Name: " + tuple.getStringByName("Name"));
     }
 
     @Override
     public void declareOutputStream(OutputStreamDeclarer declarer) {
-
     }
 }

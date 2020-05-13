@@ -11,7 +11,7 @@ public class ExampleTopology implements ITopology {
 
     @Override
     public TopologyDefinition defineTopology() throws TopologyException {
-        return new TopologyDefinition.Builder()
+        return TopologyDefinition.newBuilder()
                 .setSpout("spout", ExampleSpout.class, 1, 1)
                 .addBolt("baseBolt", ExampleBaseInfoBolt.class, 2, 2)
                 .addBolt("extendBolt", ExampleExtendInfoBolt.class, 2, 2)
@@ -19,7 +19,6 @@ public class ExampleTopology implements ITopology {
                 .addStream("spout", "baseBolt", "target1")
                 .addStream("spout", "extendBolt", "target2")
                 .addStream("baseBolt", "outputBolt", "toOutput")
-                .addStream("extendBolt", "outputBolt", "toOutput")
                 .build();
     }
 }
