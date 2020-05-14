@@ -13,6 +13,10 @@ public class ExampleSpout implements ISpout {
 
     @Override
     public void nextTuple(OutputCollector collector) {
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ignored) {
+        }
         collector.emit("target1",
                 new Value("Id", info.getId()),
                 new Value("Name", info.getName()));

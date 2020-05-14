@@ -66,12 +66,12 @@ public class WorkerServer {
 
         initGrpcClient(zkConn.get("/master"));
 
-        handleAssignmentChange();
         zkConn.addWatch(registeredPath, e -> {
             if (e.getType() == Watcher.Event.EventType.NodeChildrenChanged) {
                 handleAssignmentChange();
             }
         });
+        handleAssignmentChange();
 
         // TODO: add restart logic for worker process
 
@@ -83,10 +83,10 @@ public class WorkerServer {
         ManagedChannel channel = ManagedChannelBuilder.forTarget(target)
                 .usePlaintext()
                 .build();
-        grpcStub = ProvideJarGrpc.newStub(channel);
+        grpcStub = ProvideJarGrpc.newStub(channel).withCompression("gzip");
     }
 
-    private void handleAssignmentChange() {
+    private synchronized void handleAssignmentChange() {
         List<String> assignedTasks = zkConn.getChildren(registeredPath);
         List<String> acceptedTasks = zkConn.getChildren(acceptedTasksPath);
         assignedTasks.forEach(t -> {
@@ -119,15 +119,14 @@ public class WorkerServer {
             System.exit(-1);
         }
 
-        // .substring(6) => remove "file:/" prefix
-        String currentJarPath = getClass().getProtectionDomain().getCodeSource()
-                .getLocation().toString().substring(6);
-        String command = WorkerUtil.getJvmPath() + "-cp " + currentJarPath + " " +
-                WorkerProcessMain.class.getCanonicalName() + " " + jarPath + " " + taskFullName;
-        log.info("Execute \"" + command + "\"");
+        String classPath = System.getProperty("java.class.path");
+        ProcessBuilder pb = new ProcessBuilder(WorkerUtil.getJvmPath(), "-cp",
+                classPath, WorkerProcessMain.class.getCanonicalName(), jarPath, taskFullName);
+        pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+        pb.redirectError(ProcessBuilder.Redirect.INHERIT);
         long pid = -1;
         try {
-            Process p = Runtime.getRuntime().exec(command);
+            Process p = pb.start();
             pid = WorkerUtil.getPid(p);
         } catch (Throwable t) {
             log.error("Failed to launch worker process: " + t.toString());
@@ -166,7 +165,7 @@ public class WorkerServer {
 
             CountDownLatch receiveCompleted = new CountDownLatch(1);
             AtomicBoolean success = new AtomicBoolean();
-            grpcStub.withCompression("gzip").provideJar(request, new StreamObserver<ProvideJarResponse>() {
+            grpcStub.provideJar(request, new StreamObserver<ProvideJarResponse>() {
                 @Override
                 public void onNext(ProvideJarResponse value) {
                     try {

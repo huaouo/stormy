@@ -10,7 +10,7 @@ import com.huaouo.stormy.api.IBolt;
 import com.huaouo.stormy.api.IOperator;
 import com.huaouo.stormy.api.ISpout;
 import com.huaouo.stormy.api.stream.DynamicSchema;
-import com.huaouo.stormy.api.stream.OutputCollector;
+import com.huaouo.stormy.workerprocess.topology.OutputCollectorImpl;
 import com.huaouo.stormy.api.stream.Tuple;
 
 import java.util.Map;
@@ -21,19 +21,19 @@ public class ComputeThread implements Runnable {
     private IOperator operator;
     private DynamicSchema inboundSchema;
     private BlockingQueue<byte[]> inboundQueue;
-    private OutputCollector outputCollector;
+    private OutputCollectorImpl outputCollector;
 
     public ComputeThread(Class<? extends IOperator> operatorClass,
                          DynamicSchema inboundSchema,
                          Map<String, DynamicSchema> outboundSchemaMap,
                          BlockingQueue<byte[]> inboundQueue,
-                         Map<String, BlockingQueue<byte[]>> outboundQueueMap)
+                         BlockingQueue<ComputedOutput> outboundQueue)
             throws IllegalAccessException, InstantiationException {
         this.operator = operatorClass.newInstance();
         this.inboundSchema = inboundSchema;
         this.inboundQueue = inboundQueue;
 
-        this.outputCollector = new OutputCollector(outboundSchemaMap, outboundQueueMap);
+        this.outputCollector = new OutputCollectorImpl(outboundSchemaMap, outboundQueue);
     }
 
     @Override

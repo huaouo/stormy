@@ -12,6 +12,7 @@ import com.huaouo.stormy.shared.GuiceModule;
 import com.huaouo.stormy.shared.util.SharedUtil;
 import com.huaouo.stormy.shared.wrapper.ZooKeeperConnection;
 import com.huaouo.stormy.workerprocess.controller.TransmitTupleController;
+import com.huaouo.stormy.workerprocess.thread.ComputedOutput;
 import com.huaouo.stormy.workerprocess.thread.ComputeThread;
 import com.huaouo.stormy.workerprocess.thread.TransmitTupleClientThread;
 import com.huaouo.stormy.workerprocess.topology.OperatorLoader;
@@ -68,13 +69,13 @@ public class WorkerProcessServer {
         registerInboundStream(port);
 
         messageSender.initWithOutbounds(outboundSchemaMap.keySet());
-        Map<String, BlockingQueue<byte[]>> outboundQueueMap = messageSender.getOutboundQueueMap();
+        BlockingQueue<ComputedOutput> outboundQueue = messageSender.getOutboundQueue();
 
         DynamicSchema inboundSchema = blockUntilInboundSchemaAvailable();
         threadPool.submit(messageSender);
         for (int i = 0; i < threadNum; ++i) {
             threadPool.submit(new ComputeThread(opClass, inboundSchema,
-                    outboundSchemaMap, inboundQueue, outboundQueueMap));
+                    outboundSchemaMap, inboundQueue, outboundQueue));
         }
         // TODO: add thread monitor as new thread
     }
@@ -112,7 +113,9 @@ public class WorkerProcessServer {
             zkConn.create(outboundPath, null);
             txn.setData(outboundPath, e.getValue().toByteArray(), -1);
         }
-        txn.commit();
+        if (!outboundSchemaMap.isEmpty()) {
+            txn.commit();
+        }
         return outboundSchemaMap;
     }
 
