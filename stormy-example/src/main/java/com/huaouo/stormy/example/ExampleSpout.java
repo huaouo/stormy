@@ -3,10 +3,7 @@
 
 package com.huaouo.stormy.example;
 
-import com.huaouo.stormy.api.stream.Field;
-import com.huaouo.stormy.api.stream.FieldType;
-import com.huaouo.stormy.api.stream.OutputCollector;
-import com.huaouo.stormy.api.stream.OutputStreamDeclarer;
+import com.huaouo.stormy.api.stream.*;
 import com.huaouo.stormy.api.ISpout;
 import com.huaouo.stormy.example.model.UserInfo;
 
@@ -16,8 +13,12 @@ public class ExampleSpout implements ISpout {
 
     @Override
     public void nextTuple(OutputCollector collector) {
-        collector.emit("target1", info.getId(), info.getName());
-        collector.emit("target2", info.getEmail(), info.getAddress());
+        collector.emit("target1",
+                new Value("Id", info.getId()),
+                new Value("Name", info.getName()));
+        collector.emit("target2",
+                new Value("Email", info.getEmail()),
+                new Value("Address", info.getAddress()));
     }
 
     @Override

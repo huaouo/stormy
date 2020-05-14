@@ -3,33 +3,37 @@
 
 package com.huaouo.stormy.workerprocess.thread;
 
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.DynamicMessage;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.huaouo.stormy.api.IBolt;
 import com.huaouo.stormy.api.IOperator;
 import com.huaouo.stormy.api.ISpout;
 import com.huaouo.stormy.api.stream.DynamicSchema;
+import com.huaouo.stormy.api.stream.OutputCollector;
+import com.huaouo.stormy.api.stream.Tuple;
 
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 
 public class ComputeThread implements Runnable {
 
-    private String taskName;
     private IOperator operator;
     private DynamicSchema inboundSchema;
     private BlockingQueue<byte[]> inboundQueue;
-    private Map<String, BlockingQueue<byte[]>> outboundQueueMap;
+    private OutputCollector outputCollector;
 
-    public ComputeThread(String taskName,
-                         Class<? extends IOperator> operatorClass,
+    public ComputeThread(Class<? extends IOperator> operatorClass,
                          DynamicSchema inboundSchema,
+                         Map<String, DynamicSchema> outboundSchemaMap,
                          BlockingQueue<byte[]> inboundQueue,
                          Map<String, BlockingQueue<byte[]>> outboundQueueMap)
             throws IllegalAccessException, InstantiationException {
-        this.taskName = taskName;
         this.operator = operatorClass.newInstance();
         this.inboundSchema = inboundSchema;
         this.inboundQueue = inboundQueue;
-        this.outboundQueueMap = outboundQueueMap;
+
+        this.outputCollector = new OutputCollector(outboundSchemaMap, outboundQueueMap);
     }
 
     @Override
@@ -44,14 +48,29 @@ public class ComputeThread implements Runnable {
     private void spoutLoop() {
         ISpout spout = (ISpout) operator;
         while (true) {
-
+            // TODO: add max tuple num constraint
+            spout.nextTuple(outputCollector);
         }
     }
 
     private void boltLoop() {
         IBolt bolt = (IBolt) operator;
         while (true) {
-
+            Tuple tuple;
+            try {
+                tuple = decodeInboundMessage();
+            } catch (Throwable e) {
+                continue;
+            }
+            bolt.compute(tuple, outputCollector);
         }
+    }
+
+    private Tuple decodeInboundMessage() throws InterruptedException, InvalidProtocolBufferException {
+        byte[] messageBytes = inboundQueue.take();
+        DynamicMessage.Builder parsedMessageBuilder = inboundSchema.newMessageBuilder("TupleData");
+        Descriptors.Descriptor parsedMsgDesc = parsedMessageBuilder.getDescriptorForType();
+        DynamicMessage parsedMessage = parsedMessageBuilder.mergeFrom(messageBytes).build();
+        return new Tuple(parsedMessage, parsedMsgDesc);
     }
 }

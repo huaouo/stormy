@@ -5,7 +5,6 @@ package com.huaouo.stormy.workerprocess;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.protobuf.Descriptors;
 import com.huaouo.stormy.api.IOperator;
 import com.huaouo.stormy.api.stream.DynamicSchema;
 import com.huaouo.stormy.api.stream.OutputStreamDeclarer;
@@ -74,8 +73,8 @@ public class WorkerProcessServer {
         DynamicSchema inboundSchema = blockUntilInboundSchemaAvailable();
         threadPool.submit(messageSender);
         for (int i = 0; i < threadNum; ++i) {
-            threadPool.submit(new ComputeThread(taskName, opClass,
-                    inboundSchema, inboundQueue, outboundQueueMap));
+            threadPool.submit(new ComputeThread(opClass, inboundSchema,
+                    outboundSchemaMap, inboundQueue, outboundQueueMap));
         }
         // TODO: add thread monitor as new thread
     }

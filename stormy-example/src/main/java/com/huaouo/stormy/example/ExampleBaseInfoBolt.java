@@ -10,7 +10,9 @@ public class ExampleBaseInfoBolt implements IBolt {
 
     @Override
     public void compute(Tuple tuple, OutputCollector collector) {
-        collector.emit("toOutput", tuple.getStringByName("Id"), tuple.getStringByName("Name"));
+        collector.emit("toOutput",
+                new Value("Id", tuple.getStringByName("Id")),
+                new Value("Name", tuple.getStringByName("Name")));
     }
 
     @Override

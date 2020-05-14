@@ -32,11 +32,13 @@ subprojects {
     dependencies {
         compileOnly 'org.projectlombok:lombok:1.18.12'
         annotationProcessor 'org.projectlombok:lombok:1.18.12'
-        if (!project.name.endsWithAny('client', 'api', 'example')) {
+        if (!project.name.endsWithAny('client', 'example')) {
             if (!project.name.endsWith('shared')) {
                 implementation 'ch.qos.logback:logback-classic:1.2.3'
             }
-            implementation 'com.google.inject:guice:4.2.2'
+            if (!project.name.endsWith('api')) {
+                implementation 'com.google.inject:guice:4.2.2'
+            }
         }
 
         testCompileOnly 'org.projectlombok:lombok:1.18.12'
