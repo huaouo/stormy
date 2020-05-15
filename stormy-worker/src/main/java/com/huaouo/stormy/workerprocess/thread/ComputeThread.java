@@ -12,10 +12,12 @@ import com.huaouo.stormy.api.ISpout;
 import com.huaouo.stormy.api.stream.DynamicSchema;
 import com.huaouo.stormy.workerprocess.topology.OutputCollectorImpl;
 import com.huaouo.stormy.api.stream.Tuple;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 
+@Slf4j
 public class ComputeThread implements Runnable {
 
     private IOperator operator;
@@ -48,8 +50,12 @@ public class ComputeThread implements Runnable {
     private void spoutLoop() {
         ISpout spout = (ISpout) operator;
         while (true) {
-            // TODO: add max tuple num constraint
-            spout.nextTuple(outputCollector);
+            try {
+                // TODO: add max tuple num constraint
+                spout.nextTuple(outputCollector);
+            } catch (Throwable t) {
+                log.error(t.toString());
+            }
         }
     }
 
@@ -59,10 +65,10 @@ public class ComputeThread implements Runnable {
             Tuple tuple;
             try {
                 tuple = decodeInboundMessage();
-            } catch (Throwable e) {
-                continue;
+                bolt.compute(tuple, outputCollector);
+            } catch (Throwable t) {
+                log.error(t.toString());
             }
-            bolt.compute(tuple, outputCollector);
         }
     }
 

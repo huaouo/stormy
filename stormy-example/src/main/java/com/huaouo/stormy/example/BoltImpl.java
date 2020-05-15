@@ -8,12 +8,11 @@ import com.huaouo.stormy.api.stream.OutputCollector;
 import com.huaouo.stormy.api.stream.OutputStreamDeclarer;
 import com.huaouo.stormy.api.stream.Tuple;
 
-public class ExampleOutputBolt implements IBolt {
+public class BoltImpl implements IBolt {
 
     @Override
     public void compute(Tuple tuple, OutputCollector controller) {
-        System.out.println("Id: " + tuple.getIntByName("Id"));
-        System.out.println("Name: " + tuple.getStringByName("Name"));
+        System.out.println("Received Name: " + tuple.getStringByName("Name"));
     }
 
     @Override

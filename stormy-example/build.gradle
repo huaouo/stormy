@@ -7,7 +7,7 @@ shadowJar {
 
     manifest {
         attributes(
-                'Main-Class': 'com.huaouo.stormy.example.ExampleTopology'
+                'Main-Class': 'com.huaouo.stormy.example.TopologyImpl'
         )
     }
 }

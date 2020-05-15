@@ -86,6 +86,9 @@ public class WorkerProcessServer {
     }
 
     private DynamicSchema blockUntilInboundSchemaAvailable() throws Throwable {
+        if (inbound.isEmpty()) {
+            return null;
+        }
         BytesWrapper wrapper = new BytesWrapper();
         CountDownLatch barrier = new CountDownLatch(1);
         String inboundPath = "/stream/" + inbound;

@@ -29,7 +29,8 @@ public class TopologyLoader {
         URL[] url = {jarLocalUrl};
         try (URLClassLoader loader = URLClassLoader.newInstance(url)) {
             loadTopologyDefinition(topologyName, loader, jarLocalUrl);
-            String spoutId = validateTopology(topologyName, loader);
+            validateTopology(topologyName, loader);
+            String spoutId = getSpoutId(loader);
             // nodeId => TaskDefinition
             Map<String, TaskDefinition> tasks = detectCycleAndConnectivity(spoutId);
             return new ComputationGraph(tasks, getAssignOrder(spoutId));
@@ -44,6 +45,17 @@ public class TopologyLoader {
         public DfsState<T> nextEdge() {
             return new DfsState<>(key, edgeIndex + 1);
         }
+    }
+
+    private String getSpoutId(URLClassLoader loader)
+            throws ClassNotFoundException, TopologyException {
+        for (Map.Entry<String, NodeDefinition> nodeDef : nodes.entrySet()) {
+            Class<?> nodeClass = loader.loadClass(nodeDef.getValue().getClassName());
+            if (ISpout.class.isAssignableFrom(nodeClass)) {
+                return nodeDef.getKey();
+            }
+        }
+        throw new TopologyException("No spout");
     }
 
     // Assign order of process, tasks with multiple process will appeared multiple
@@ -172,15 +184,11 @@ public class TopologyLoader {
         }
     }
 
-    private String validateTopology(String topologyName, URLClassLoader loader) throws Throwable {
-        String spoutId = null;
+    private void validateTopology(String topologyName, URLClassLoader loader) throws Throwable {
         for (Map.Entry<String, List<EdgeDefinition>> e : graph.entrySet()) {
             String sourceId = e.getKey();
 
             Class<?> sourceClass = loader.loadClass(nodes.get(sourceId).getClassName());
-            if (ISpout.class.isAssignableFrom(sourceClass)) {
-                spoutId = sourceId;
-            }
             OutputStreamDeclarer declarer = new OutputStreamDeclarer(topologyName, sourceId);
             ((IOperator) sourceClass.newInstance()).declareOutputStream(declarer);
             Set<String> schemaNames = declarer.getOutputStreamSchemas().keySet();
@@ -220,7 +228,6 @@ public class TopologyLoader {
                 }
             }
         }
-        return spoutId;
     }
 
     // Refer to CLRS, returns a Map, which maps nodeId => TaskDefinition

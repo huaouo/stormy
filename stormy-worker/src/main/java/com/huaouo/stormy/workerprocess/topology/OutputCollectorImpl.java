@@ -19,15 +19,22 @@ public class OutputCollectorImpl implements OutputCollector {
 
     private Map<String, DynamicSchema> outboundSchemaMap;
     private BlockingQueue<ComputedOutput> outboundQueue;
+    private String streamIdPrefix = "";
 
     public OutputCollectorImpl(Map<String, DynamicSchema> outboundSchemaMap,
                                BlockingQueue<ComputedOutput> outboundQueue) {
         this.outboundSchemaMap = outboundSchemaMap;
+        if (!outboundSchemaMap.isEmpty()) {
+            String randomStreamId = outboundSchemaMap.keySet().iterator().next();
+            String[] slicedStreamId = randomStreamId.split("-");
+            streamIdPrefix = slicedStreamId[0] + "-" + slicedStreamId[1] + "-";
+        }
         this.outboundQueue = outboundQueue;
     }
 
     @Override
     public void emit(String target, Value... tupleElements) {
+        target = streamIdPrefix + target;
         DynamicSchema schema = outboundSchemaMap.get(target);
         if (schema == null) {
             throw new RuntimeException("No such schema: " + target);

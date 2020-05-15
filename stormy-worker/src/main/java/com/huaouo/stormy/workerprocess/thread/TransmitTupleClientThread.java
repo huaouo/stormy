@@ -21,6 +21,7 @@ import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
@@ -64,12 +65,14 @@ public class TransmitTupleClientThread implements Runnable {
                     clientGroup.put(s, TransmitTupleGrpc.newStub(channel).withCompression("gzip"));
                 }
             });
-            clientGroup.keySet().forEach(s -> {
+            Iterator<String> iter = clientGroup.keySet().iterator();
+            while (iter.hasNext()) {
+                String s = iter.next();
                 if (!currentServers.contains(s)) {
                     ((ManagedChannel) clientGroup.get(s).getChannel()).shutdown();
-                    clientGroup.remove(s);
+                    iter.remove();
                 }
-            });
+            }
             iterators.put(streamId, clientGroup.values().iterator());
         } finally {
             streamServerLocks.get(streamId).unlock();
@@ -88,6 +91,7 @@ public class TransmitTupleClientThread implements Runnable {
 
         while (true) {
             Lock lock = null;
+            boolean needSleep = false;
             try {
                 ComputedOutput output = outboundQueue.take();
                 String streamId = output.getStreamId();
@@ -97,12 +101,14 @@ public class TransmitTupleClientThread implements Runnable {
                 if (!stubIter.hasNext()) {
                     Map<String, TransmitTupleStub> clientGroup = clients.get(streamId);
                     if (clientGroup.isEmpty()) {
-                        // drop message
+                        outboundQueue.put(output);
+                        needSleep = true;
                         continue;
                     }
                     stubIter = clientGroup.values().iterator();
                 }
                 TransmitTupleStub stub = stubIter.next();
+                iterators.put(streamId, stubIter);
                 stub.transmitTuple(RpcTuple.newBuilder()
                         .setTupleBytes(ByteString.copyFrom(output.getBytes()))
                         .build(), new StreamObserver<Empty>() {
@@ -118,8 +124,15 @@ public class TransmitTupleClientThread implements Runnable {
                     public void onCompleted() {
                     }
                 });
-            } catch (Throwable ignored) {
+            } catch (Throwable t) {
+                log.error(t.toString());
             } finally {
+                if (needSleep) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ignored) {
+                    }
+                }
                 if (lock != null) {
                     lock.unlock();
                 }
