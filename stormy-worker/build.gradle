@@ -2,4 +2,5 @@ dependencies {
     implementation project(':stormy-shared')
     implementation('net.java.dev.jna:jna:5.5.0')
     implementation('net.java.dev.jna:jna-platform:5.5.0')
+    implementation('com.github.oshi:oshi-core:5.0.1')
 }

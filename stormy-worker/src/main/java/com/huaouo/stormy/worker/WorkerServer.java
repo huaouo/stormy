@@ -18,6 +18,9 @@ import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.Watcher;
+import oshi.SystemInfo;
+import oshi.software.os.OSProcess;
+import oshi.software.os.OperatingSystem;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -26,7 +29,9 @@ import java.io.OutputStream;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.LockSupport;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
 @Singleton
@@ -39,9 +44,10 @@ public class WorkerServer {
     private JarFileService jarService;
 
     private ProvideJarStub grpcStub;
+    private Lock zkLock = new ReentrantLock();
+    private OperatingSystem os = new SystemInfo().getOperatingSystem();
 
     private String registeredPath;
-    private String nodeDataPath;
     private String acceptedTasksPath;
 
     public void startAndBlock() {
@@ -54,11 +60,11 @@ public class WorkerServer {
         }
 
         registeredPath = "/worker/registered/" + ip;
-        nodeDataPath = "/worker/nodeData/" + ip;
+        String nodeDataPath = "/worker/nodeData/" + ip;
         acceptedTasksPath = nodeDataPath + "/accepted";
         zkConn.create(registeredPath, "0");
         zkConn.create(nodeDataPath, null);
-        zkConn.create(nodeDataPath + "/accepted", null);
+        zkConn.create(acceptedTasksPath, null);
         if (!zkConn.create("/worker/available/" + ip, null, CreateMode.EPHEMERAL)) {
             log.error("A worker is already running on this node");
             System.exit(-1);
@@ -73,9 +79,32 @@ public class WorkerServer {
         });
         handleAssignmentChange();
 
-        // TODO: add restart logic for worker process
+        // monitor accepted tasks and restart them if necessary
+        new Thread(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(5000);
+                    zkLock.lock();
+                    List<String> acceptedTasks = zkConn.getChildren(acceptedTasksPath);
+                    for (String t : acceptedTasks) {
+                        String taskPath = acceptedTasksPath + "/" + t;
+                        long pid = Long.parseLong(zkConn.get(taskPath));
+                        OSProcess p = os.getProcess((int) pid);
+                        if (p == null || !p.getName().contains("java")) {
+                            // restart process
+                            pid = createTaskProcess(t);
+                            zkConn.set(taskPath, Long.toString(pid));
+                        }
+                    }
+                } catch (Throwable t) {
+                    log.error(t.toString());
+                } finally {
+                    zkLock.unlock();
+                }
+            }
+        }).start();
 
-        // Block
+        // block
         LockSupport.park();
     }
 
@@ -86,22 +115,32 @@ public class WorkerServer {
         grpcStub = ProvideJarGrpc.newStub(channel).withCompression("gzip");
     }
 
-    private synchronized void handleAssignmentChange() {
-        List<String> assignedTasks = zkConn.getChildren(registeredPath);
-        List<String> acceptedTasks = zkConn.getChildren(acceptedTasksPath);
-        assignedTasks.forEach(t -> {
-            if (!acceptedTasks.contains(t)) {
-                acceptTask(t);
-            }
-        });
-        acceptedTasks.forEach(t -> {
-            if (!assignedTasks.contains(t)) {
-                removeTask(t);
-            }
-        });
+    private void handleAssignmentChange() {
+        try {
+            zkLock.lock();
+            List<String> assignedTasks = zkConn.getChildren(registeredPath);
+            List<String> acceptedTasks = zkConn.getChildren(acceptedTasksPath);
+            assignedTasks.forEach(t -> {
+                if (!acceptedTasks.contains(t)) {
+                    acceptTask(t);
+                }
+            });
+            acceptedTasks.forEach(t -> {
+                if (!assignedTasks.contains(t)) {
+                    removeTask(t);
+                }
+            });
+        } finally {
+            zkLock.unlock();
+        }
     }
 
     private void acceptTask(String taskFullName) {
+        long pid = createTaskProcess(taskFullName);
+        zkConn.create(acceptedTasksPath + "/" + taskFullName, Long.toString(pid));
+    }
+
+    private long createTaskProcess(String taskFullName) {
         // [0] => topologyName
         // [1] => taskName
         // [2] => processIndex
@@ -132,7 +171,7 @@ public class WorkerServer {
             log.error("Failed to launch worker process: " + t.toString());
             System.exit(-1);
         }
-        zkConn.create(acceptedTasksPath + "/" + taskFullName, Long.toString(pid));
+        return pid;
     }
 
     private void removeTask(String taskFullName) {
