@@ -163,8 +163,14 @@ public class ManageTopologyController extends ManageTopologyImplBase {
                             message = "Success";
                             break;
                         case STOP_TOPOLOGY:
-                            zkService.stopTopology(topologyName);
-                            // TODO: add stop hook, delete zk entry and jar file
+                            try {
+                                zkService.stopTopology(topologyName);
+                                jarService.deleteJarFile(topologyName);
+                            } catch (Throwable t) {
+                                message = "Failed to stop topology: " + t.toString();
+                                break;
+                            }
+
                             message = "Success";
                             break;
                         case QUERY_RUNNING_TOPOLOGY:

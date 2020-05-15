@@ -96,13 +96,12 @@ public class ZooKeeperConnection {
         PathUtils.validatePath(path);
 
         List<String> children = getChildren(path);
-        if (children.isEmpty()) {
-            delete(path);
-        } else {
+        if (!children.isEmpty()) {
             for (String c : children) {
                 deleteRecursive(path + "/" + c);
             }
         }
+        delete(path);
     }
 
     @SneakyThrows

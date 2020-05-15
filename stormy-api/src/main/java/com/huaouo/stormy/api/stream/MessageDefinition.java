@@ -35,7 +35,6 @@ public class MessageDefinition {
         return mMsgType.toString();
     }
 
-    // TODO: changed to package
     public DescriptorProto getMessageType() {
         return mMsgType;
     }

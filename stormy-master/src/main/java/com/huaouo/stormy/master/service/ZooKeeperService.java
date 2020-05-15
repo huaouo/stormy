@@ -167,12 +167,42 @@ public class ZooKeeperService {
         txn.commit();
     }
 
-    public void deleteTopology(String topologyName) {
-        zkConn.deleteRecursive(topologyName);
-    }
-
     public void stopTopology(String topologyName) {
-        zkConn.set("/master/topology/" + topologyName, "stop");
+        String topologyPath = "/master/topology/" + topologyName;
+        zkConn.set(topologyPath, "stop");
+        String registeredPath = "/worker/registered";
+        List<String> registeredWorkers = zkConn.getChildren(registeredPath);
+
+        // delete assigned tasks
+        for (String worker : registeredWorkers) {
+            String workerPath = registeredPath + "/" + worker;
+            int threadNum = Integer.parseInt(zkConn.get(workerPath));
+            List<String> assignedTasks = zkConn.getChildren(workerPath);
+            for (String task : assignedTasks) {
+                if (task.startsWith(topologyName + "#")) {
+                    // [0] => topologyName
+                    // [1] => taskName
+                    // [2] => processIndex
+                    // [3] => threadNum
+                    // [4] => inboundStr
+                    // [5] => outboundStr
+                    threadNum -= Integer.parseInt(task.split("#", -1)[3]);
+                    zkConn.delete(workerPath + "/" + task);
+                }
+            }
+            zkConn.set(workerPath, Integer.toString(threadNum));
+        }
+
+        // delete streams
+        String streamPath = "/stream";
+        List<String> streams = zkConn.getChildren(streamPath);
+        for (String stream : streams) {
+            if (stream.startsWith(topologyName + "-")) {
+                zkConn.deleteRecursive(streamPath + "/" + stream);
+            }
+        }
+
+        zkConn.delete(topologyPath);
     }
 
     public Map<String, String> getRunningTopologies() {

@@ -179,6 +179,15 @@ public class WorkerServer {
         long pid = Long.parseLong(zkConn.get(removeTaskPath));
         WorkerUtil.killByPid(pid);
         zkConn.delete(removeTaskPath);
+        String topologyName = taskFullName.split("#", -1)[0];
+        List<String> acceptedTasks = zkConn.getChildren(acceptedTasksPath);
+        if (acceptedTasks.stream().noneMatch(t -> t.startsWith(topologyName + "#"))) {
+            try {
+                jarService.deleteJarFile(topologyName);
+            } catch (Throwable t) {
+                log.error("Failed to delete jar file: " + t.toString());
+            }
+        }
     }
 
     private String getJarPath(String topologyName) throws InterruptedException {
