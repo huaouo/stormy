@@ -11,7 +11,7 @@ import com.huaouo.stormy.api.stream.Tuple;
 public class BoltImpl implements IBolt {
 
     @Override
-    public void compute(Tuple tuple, OutputCollector controller) {
+    public void compute(Tuple tuple, OutputCollector collector) {
         System.out.println("Received Name: " + tuple.getStringByName("Name"));
     }
 

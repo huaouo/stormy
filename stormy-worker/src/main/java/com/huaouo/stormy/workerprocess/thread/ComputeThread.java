@@ -38,6 +38,8 @@ public class ComputeThread implements Runnable {
         this.outputCollector = new OutputCollectorImpl(outboundSchemaMap, outboundQueue);
     }
 
+    // TODO: check if process will exit if this thread
+    //       throws an exception
     @Override
     public void run() {
         if (operator instanceof ISpout) {

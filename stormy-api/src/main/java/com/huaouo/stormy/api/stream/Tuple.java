@@ -6,10 +6,12 @@ package com.huaouo.stormy.api.stream;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.DynamicMessage;
 
+// TODO: getXXXByName in this class will throw NullPointerException
+//       if fieldName doesn't exist in tuple, fix it later
 public class Tuple {
 
-    private DynamicMessage message;
-    private Descriptor messageDescriptor;
+    private final DynamicMessage message;
+    private final Descriptor messageDescriptor;
 
     public Tuple(DynamicMessage message, Descriptor messageDescriptor) {
         this.message = message;

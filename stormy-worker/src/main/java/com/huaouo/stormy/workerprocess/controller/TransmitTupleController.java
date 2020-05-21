@@ -19,7 +19,7 @@ public class TransmitTupleController extends TransmitTupleImplBase {
 
     private static final Empty EMPTY_MESSAGE = Empty.newBuilder().build();
 
-    private BlockingQueue<byte[]> inboundQueue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<byte[]> inboundQueue = new LinkedBlockingQueue<>();
 
     public BlockingQueue<byte[]> getInboundQueue() {
         return inboundQueue;

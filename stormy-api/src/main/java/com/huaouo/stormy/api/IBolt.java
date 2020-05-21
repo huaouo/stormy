@@ -8,5 +8,5 @@ import com.huaouo.stormy.api.stream.Tuple;
 
 public interface IBolt extends IOperator {
 
-    void compute(Tuple tuple, OutputCollector controller);
+    void compute(Tuple tuple, OutputCollector collector);
 }
