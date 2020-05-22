@@ -59,6 +59,7 @@ public class AppPropertiesProvider implements Provider<Properties> {
                 log.error(e.toString());
             }
         }
+        System.setProperties(prop);
 
         return prop;
     }

@@ -5,12 +5,16 @@ package com.huaouo.stormy.workerprocess;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.protobuf.Descriptors;
 import com.huaouo.stormy.api.IOperator;
 import com.huaouo.stormy.api.stream.DynamicSchema;
+import com.huaouo.stormy.api.stream.FieldType;
+import com.huaouo.stormy.api.stream.MessageDefinition;
 import com.huaouo.stormy.api.stream.OutputStreamDeclarer;
 import com.huaouo.stormy.shared.GuiceModule;
 import com.huaouo.stormy.shared.util.SharedUtil;
 import com.huaouo.stormy.shared.wrapper.ZooKeeperConnection;
+import com.huaouo.stormy.workerprocess.acker.Acker;
 import com.huaouo.stormy.workerprocess.controller.TransmitTupleController;
 import com.huaouo.stormy.workerprocess.thread.ComputedOutput;
 import com.huaouo.stormy.workerprocess.thread.ComputeThread;
@@ -44,7 +48,7 @@ public class WorkerProcessServer {
     @Inject
     private ZooKeeperConnection zkConn;
 
-    private ExecutorService threadPool = Executors.newCachedThreadPool(r -> {
+    private final ExecutorService threadPool = Executors.newCachedThreadPool(r -> {
         Thread t = Executors.defaultThreadFactory().newThread(r);
         t.setDaemon(true);
         return t;
@@ -59,23 +63,50 @@ public class WorkerProcessServer {
 
     public void start(String jarPath, String taskFullName) throws Throwable {
         decodeTaskFullName(taskFullName);
+        boolean isAcker = "~acker".equals(taskName);
 
-        URL jarUrl = Paths.get(jarPath).toUri().toURL();
-        Class<? extends IOperator> opClass = new OperatorLoader().load(jarUrl, taskName);
-        Map<String, DynamicSchema> outboundSchemaMap = registerOutboundSchemas(opClass);
+        Class<? extends IOperator> opClass;
+        if (isAcker) {
+            opClass = Acker.class;
+        } else {
+            URL jarUrl = Paths.get(jarPath).toUri().toURL();
+            opClass = new OperatorLoader().load(jarUrl, taskName);
+        }
+
+        // acker schema
+        DynamicSchema ackerSchema = null;
+        MessageDefinition msgDef = MessageDefinition.newBuilder("TupleData")
+                .addField(FieldType.STRING, "_topologyName")
+                .addField(FieldType.INT, "_spoutTupleId")
+                .addField(FieldType.INT, "_traceId")
+                .build();
+        DynamicSchema.Builder schemaBuilder = DynamicSchema.newBuilder();
+        schemaBuilder.addMessageDefinition(msgDef);
+        try {
+            ackerSchema = schemaBuilder.build();
+        } catch (Descriptors.DescriptorValidationException e) {
+            log.error(e.toString());
+            System.exit(-1);
+        }
+        Map<String, DynamicSchema> outboundSchemaMap = registerOutboundSchemas(opClass, ackerSchema);
 
         BlockingQueue<byte[]> inboundQueue = messageReceiver.getInboundQueue();
         int port = startGrpcServer();
         registerInboundStream(port);
 
-        messageSender.initWithOutbounds(outboundSchemaMap.keySet());
+        messageSender.init(outboundSchemaMap.keySet());
         BlockingQueue<ComputedOutput> outboundQueue = messageSender.getOutboundQueue();
 
-        DynamicSchema inboundSchema = blockUntilInboundSchemaAvailable();
+        DynamicSchema inboundSchema;
+        if ("~acker".equals(taskName)) {
+            inboundSchema = ackerSchema;
+        } else {
+            inboundSchema = blockUntilInboundSchemaAvailable();
+        }
         threadPool.submit(messageSender);
         for (int i = 0; i < threadNum; ++i) {
-            threadPool.submit(new ComputeThread(opClass, inboundSchema,
-                    outboundSchemaMap, inboundQueue, outboundQueue));
+            threadPool.submit(new ComputeThread(topologyName, opClass, inboundSchema,
+                    outboundSchemaMap, inboundQueue, outboundQueue, ackerSchema));
         }
         // TODO: add thread monitor as new thread
     }
@@ -105,7 +136,8 @@ public class WorkerProcessServer {
         return DynamicSchema.parseFrom(wrapper.getBytes());
     }
 
-    private Map<String, DynamicSchema> registerOutboundSchemas(Class<? extends IOperator> opClass) throws Throwable {
+    private Map<String, DynamicSchema> registerOutboundSchemas(Class<? extends IOperator> opClass,
+                                                               DynamicSchema ackerSchema) throws Throwable {
         IOperator operator = opClass.newInstance();
         OutputStreamDeclarer declarer = new OutputStreamDeclarer(topologyName, taskName);
         operator.declareOutputStream(declarer);
@@ -119,6 +151,10 @@ public class WorkerProcessServer {
         if (!outboundSchemaMap.isEmpty()) {
             txn.commit();
         }
+
+        String ackerStreamId = topologyName + "-~ackerInbound";
+        outboundSchemaMap.put(ackerStreamId, ackerSchema);
+        zkConn.create("/stream/" + ackerStreamId, null);
         return outboundSchemaMap;
     }
 

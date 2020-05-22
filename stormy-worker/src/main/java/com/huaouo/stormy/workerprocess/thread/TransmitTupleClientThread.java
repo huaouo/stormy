@@ -21,7 +21,6 @@ import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Slf4j
@@ -29,14 +28,14 @@ import java.util.concurrent.locks.ReentrantLock;
 public class TransmitTupleClientThread implements Runnable {
 
     @Inject
-    ZooKeeperConnection zkConn;
+    private ZooKeeperConnection zkConn;
 
-    private BlockingQueue<ComputedOutput> outboundQueue = new LinkedBlockingQueue<>();
-    private Map<String, Map<String, TransmitTupleStub>> clients = new HashMap<>();
-    private Map<String, Lock> streamServerLocks = new HashMap<>();
-    private Map<String, Iterator<TransmitTupleStub>> iterators = new HashMap<>();
+    private final BlockingQueue<ComputedOutput> outboundQueue = new LinkedBlockingQueue<>();
+    private final Map<String, Map<String, TransmitTupleStub>> clients = new HashMap<>();
+    private final Map<String, Lock> streamServerLocks = new HashMap<>();
+    private final Map<String, Iterator<TransmitTupleStub>> iterators = new HashMap<>();
 
-    public void initWithOutbounds(Set<String> outbounds) {
+    public void init(Set<String> outbounds) {
         for (String streamId : outbounds) {
             Map<String, TransmitTupleStub> m = new HashMap<>();
             clients.put(streamId, m);
@@ -85,10 +84,6 @@ public class TransmitTupleClientThread implements Runnable {
 
     @Override
     public void run() {
-        if (outboundQueue == null) {
-            throw new RuntimeException("Not initialized");
-        }
-
         while (true) {
             Lock lock = null;
             boolean needSleep = false;
@@ -126,6 +121,7 @@ public class TransmitTupleClientThread implements Runnable {
                 });
             } catch (Throwable t) {
                 log.error(t.toString());
+                t.printStackTrace();
             } finally {
                 if (needSleep) {
                     try {

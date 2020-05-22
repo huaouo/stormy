@@ -13,8 +13,10 @@ public class TopologyImpl implements ITopology {
     public TopologyDefinition defineTopology() throws TopologyException {
         return TopologyDefinition.newBuilder()
                 .setSpout("spout", SpoutImpl.class, 1, 1)
+                .addBolt("intermediateBolt", IntermediateBoltImpl.class, 1, 1)
                 .addBolt("bolt", BoltImpl.class, 1, 1)
-                .addStream("spout", "bolt", "myStream")
+                .addStream("spout", "intermediateBolt", "myStream")
+                .addStream("intermediateBolt", "bolt", "myStream")
                 .build();
     }
 }

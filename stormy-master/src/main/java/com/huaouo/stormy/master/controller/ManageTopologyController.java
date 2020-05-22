@@ -145,6 +145,10 @@ public class ManageTopologyController extends ManageTopologyImplBase {
                 synchronized (ManageTopologyController.class) {
                     switch (requestType) {
                         case START_TOPOLOGY:
+                            if (topologyName.length() > Byte.MAX_VALUE) {
+                                message = "Length of topology name shouldn't be more than 127";
+                            }
+
                             if (zkService.topologyExists(topologyName)) {
                                 message = "Topology exists";
                                 break;

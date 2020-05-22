@@ -3,6 +3,7 @@
 
 package com.huaouo.stormy.master.topology;
 
+import com.google.common.collect.Lists;
 import com.huaouo.stormy.api.IOperator;
 import com.huaouo.stormy.api.ISpout;
 import com.huaouo.stormy.api.ITopology;
@@ -33,14 +34,23 @@ public class TopologyLoader {
             String spoutId = getSpoutId(loader);
             // nodeId => TaskDefinition
             Map<String, TaskDefinition> tasks = detectCycleAndConnectivity(spoutId);
-            return new ComputationGraph(tasks, getAssignOrder(spoutId));
+            ComputationGraph cGraph = new ComputationGraph(tasks, getAssignOrder(spoutId));
+
+            // add acker
+            cGraph.getAssignOrder().add("~acker");
+            TaskDefinition ackerTask = new TaskDefinition();
+            ackerTask.setProcessNum(1);
+            ackerTask.setThreadsPerProcess(3);
+            ackerTask.setInboundStreamIds(Lists.newArrayList(topologyName + "-~ackerInbound"));
+            cGraph.getTasks().put("~acker", ackerTask);
+            return cGraph;
         }
     }
 
     @AllArgsConstructor
     private static class DfsState<T> {
-        private T key;
-        private int edgeIndex;
+        private final T key;
+        private final int edgeIndex;
 
         public DfsState<T> nextEdge() {
             return new DfsState<>(key, edgeIndex + 1);

@@ -43,10 +43,9 @@ public class WorkerServer {
     @Inject
     private JarFileService jarService;
 
+    private final Lock zkLock = new ReentrantLock();
+    private final OperatingSystem os = new SystemInfo().getOperatingSystem();
     private ProvideJarStub grpcStub;
-    private Lock zkLock = new ReentrantLock();
-    private OperatingSystem os = new SystemInfo().getOperatingSystem();
-
     private String registeredPath;
     private String acceptedTasksPath;
 
@@ -149,18 +148,24 @@ public class WorkerServer {
         // [5] => outboundStr
         String[] taskInfo = taskFullName.split("#", -1);
         String topologyName = taskInfo[0];
+        String taskName = taskInfo[1];
 
         String jarPath = null;
-        try {
-            jarPath = getJarPath(topologyName);
-        } catch (Throwable t) {
-            log.error("Failed to get jar: " + t.toString());
-            System.exit(-1);
+        if ("~acker".equals(taskName)) {
+            jarPath = "~acker";
+        } else {
+            try {
+                jarPath = getJarPath(topologyName);
+            } catch (Throwable t) {
+                log.error("Failed to get jar: " + t.toString());
+                System.exit(-1);
+            }
         }
 
         String classPath = System.getProperty("java.class.path");
         ProcessBuilder pb = new ProcessBuilder(WorkerUtil.getJvmPath(), "-cp",
                 classPath, WorkerProcessMain.class.getCanonicalName(), jarPath, taskFullName);
+        log.info("Launch params: " + jarPath + " " + taskFullName);
         pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
         pb.redirectError(ProcessBuilder.Redirect.INHERIT);
         long pid = -1;

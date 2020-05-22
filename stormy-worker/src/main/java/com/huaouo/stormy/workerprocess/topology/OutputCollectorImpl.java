@@ -3,7 +3,7 @@
 
 package com.huaouo.stormy.workerprocess.topology;
 
-import com.google.protobuf.Descriptors;
+import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.DynamicMessage;
 import com.huaouo.stormy.api.stream.DynamicSchema;
 import com.huaouo.stormy.api.stream.OutputCollector;
@@ -17,12 +17,14 @@ import java.util.concurrent.BlockingQueue;
 @Slf4j
 public class OutputCollectorImpl implements OutputCollector {
 
-    private Map<String, DynamicSchema> outboundSchemaMap;
-    private BlockingQueue<ComputedOutput> outboundQueue;
+    private final Map<String, DynamicSchema> outboundSchemaMap;
+    private final BlockingQueue<ComputedOutput> outboundQueue;
+    private final BeforeEmitCallback beforeEmit;
     private String streamIdPrefix = "";
 
     public OutputCollectorImpl(Map<String, DynamicSchema> outboundSchemaMap,
-                               BlockingQueue<ComputedOutput> outboundQueue) {
+                               BlockingQueue<ComputedOutput> outboundQueue,
+                               BeforeEmitCallback beforeEmit) {
         this.outboundSchemaMap = outboundSchemaMap;
         if (!outboundSchemaMap.isEmpty()) {
             String randomStreamId = outboundSchemaMap.keySet().iterator().next();
@@ -30,6 +32,7 @@ public class OutputCollectorImpl implements OutputCollector {
             streamIdPrefix = slicedStreamId[0] + "-" + slicedStreamId[1] + "-";
         }
         this.outboundQueue = outboundQueue;
+        this.beforeEmit = beforeEmit;
     }
 
     @Override
@@ -40,12 +43,13 @@ public class OutputCollectorImpl implements OutputCollector {
             throw new RuntimeException("No such schema: " + target);
         }
         DynamicMessage.Builder msgBuilder = schema.newMessageBuilder("TupleData");
-        Descriptors.Descriptor msgDesc = msgBuilder.getDescriptorForType();
+        Descriptor msgDesc = msgBuilder.getDescriptorForType();
         for (Value v : tupleElements) {
             msgBuilder.setField(msgDesc.findFieldByName(v.getName()), v.getValue());
         }
+        ComputedOutput output = beforeEmit.accept(msgBuilder, msgDesc, target);
         try {
-            outboundQueue.put(new ComputedOutput(target, msgBuilder.build().toByteArray()));
+            outboundQueue.put(output);
         } catch (InterruptedException e) {
             log.error(e.toString());
         }
