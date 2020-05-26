@@ -59,7 +59,9 @@ public class AppPropertiesProvider implements Provider<Properties> {
                 log.error(e.toString());
             }
         }
-        System.setProperties(prop);
+        for (String key : prop.stringPropertyNames()) {
+            System.setProperty(key, prop.getProperty(key));
+        }
 
         return prop;
     }

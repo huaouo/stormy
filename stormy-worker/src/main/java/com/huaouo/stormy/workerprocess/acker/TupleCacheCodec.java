@@ -9,7 +9,7 @@ import io.lettuce.core.codec.RedisCodec;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-public class TupleCacheCodec implements RedisCodec<TopologyTupleId, ComputedOutput> {
+public class TupleCacheCodec implements RedisCodec<TopologyTupleId, CachedComputedOutput> {
 
     private final AckerCodec ackerCodec = new AckerCodec();
 
@@ -19,13 +19,15 @@ public class TupleCacheCodec implements RedisCodec<TopologyTupleId, ComputedOutp
     }
 
     @Override
-    public ComputedOutput decodeValue(ByteBuffer bytes) {
-        int streamIdLen = ackerCodec.decodeInt(bytes);
+    public CachedComputedOutput decodeValue(ByteBuffer bytes) {
+        int initTraceId = bytes.getInt();
+        int streamIdLen = bytes.getInt();
         byte[] streamIdBytes = new byte[streamIdLen];
         bytes.get(streamIdBytes);
         byte[] dataBytes = new byte[bytes.remaining()];
         bytes.get(dataBytes);
-        return new ComputedOutput(new String(streamIdBytes, StandardCharsets.UTF_8), dataBytes);
+        ComputedOutput out = new ComputedOutput(new String(streamIdBytes, StandardCharsets.UTF_8), dataBytes);
+        return new CachedComputedOutput(initTraceId, out);
     }
 
     @Override
@@ -34,12 +36,15 @@ public class TupleCacheCodec implements RedisCodec<TopologyTupleId, ComputedOutp
     }
 
     @Override
-    public ByteBuffer encodeValue(ComputedOutput value) {
-        byte[] streamIdBytes = value.getStreamId().getBytes(StandardCharsets.UTF_8);
-        ByteBuffer buf = ByteBuffer.allocate(4 + streamIdBytes.length + value.getBytes().length);
-        ackerCodec.encodeInt(buf, streamIdBytes.length);
+    public ByteBuffer encodeValue(CachedComputedOutput value) {
+        ComputedOutput out = value.getComputedOutput();
+        byte[] streamIdBytes = out.getStreamId().getBytes(StandardCharsets.UTF_8);
+        ByteBuffer buf = ByteBuffer.allocate(8 + streamIdBytes.length + out.getBytes().length);
+        buf.putInt(value.getInitTraceId());
+        buf.putInt(streamIdBytes.length);
         buf.put(streamIdBytes);
-        buf.put(value.getBytes());
+        buf.put(out.getBytes());
+        buf.flip();
         return buf;
     }
 }

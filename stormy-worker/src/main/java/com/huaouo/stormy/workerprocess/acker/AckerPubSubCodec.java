@@ -4,18 +4,19 @@
 package com.huaouo.stormy.workerprocess.acker;
 
 import io.lettuce.core.codec.RedisCodec;
-import io.lettuce.core.codec.StringCodec;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 public class AckerPubSubCodec implements RedisCodec<String, TopologyTupleId> {
 
     private final AckerCodec ackerCodec = new AckerCodec();
-    private final StringCodec stringCodec = new StringCodec();
 
     @Override
     public String decodeKey(ByteBuffer bytes) {
-        return stringCodec.decodeKey(bytes);
+        byte[] stringBytes = new byte[bytes.remaining()];
+        bytes.get(stringBytes);
+        return new String(stringBytes, StandardCharsets.UTF_8);
     }
 
     @Override
@@ -25,7 +26,8 @@ public class AckerPubSubCodec implements RedisCodec<String, TopologyTupleId> {
 
     @Override
     public ByteBuffer encodeKey(String key) {
-        return stringCodec.encodeKey(key);
+        byte[] stringBytes = key.getBytes(StandardCharsets.UTF_8);
+        return ByteBuffer.wrap(stringBytes);
     }
 
     @Override

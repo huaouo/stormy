@@ -12,10 +12,7 @@ import com.huaouo.stormy.api.ISpout;
 import com.huaouo.stormy.api.stream.DynamicSchema;
 import com.huaouo.stormy.api.stream.OutputCollector;
 import com.huaouo.stormy.api.stream.Tuple;
-import com.huaouo.stormy.workerprocess.acker.Acker;
-import com.huaouo.stormy.workerprocess.acker.AckerPubSubCodec;
-import com.huaouo.stormy.workerprocess.acker.TopologyTupleId;
-import com.huaouo.stormy.workerprocess.acker.TupleCacheCodec;
+import com.huaouo.stormy.workerprocess.acker.*;
 import com.huaouo.stormy.workerprocess.topology.OutputCollectorImpl;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
@@ -69,17 +66,17 @@ public class ComputeThread implements Runnable {
         } else if (operator instanceof IBolt) {
             boltLoop();
         } else { // ISpout
-            RedisAsyncCommands<TopologyTupleId, ComputedOutput> tupleCacheCommands = registerReplay();
+            RedisAsyncCommands<TopologyTupleId, CachedComputedOutput> tupleCacheCommands = registerReplay();
             spoutLoop(tupleCacheCommands);
         }
     }
 
-    private RedisAsyncCommands<TopologyTupleId, ComputedOutput> registerReplay() {
+    private RedisAsyncCommands<TopologyTupleId, CachedComputedOutput> registerReplay() {
         String tupleCacheUriStr = System.getProperty("stormy.redis.tuple_cache_uri");
         RedisClient tupleCacheClient = RedisClient.create(tupleCacheUriStr);
-        StatefulRedisConnection<TopologyTupleId, ComputedOutput> cacheConn =
+        StatefulRedisConnection<TopologyTupleId, CachedComputedOutput> cacheConn =
                 tupleCacheClient.connect(new TupleCacheCodec());
-        RedisAsyncCommands<TopologyTupleId, ComputedOutput> tupleCacheCommands = cacheConn.async();
+        RedisAsyncCommands<TopologyTupleId, CachedComputedOutput> tupleCacheCommands = cacheConn.async();
 
         String traceRedisUriStr = System.getProperty("stormy.redis.trace_uri");
         RedisURI traceRedisUri = RedisURI.create(traceRedisUriStr);
@@ -90,8 +87,13 @@ public class ComputeThread implements Runnable {
             @Override
             public void message(String channel, TopologyTupleId key) {
                 try {
-                    ComputedOutput output = tupleCacheCommands.get(key).get();
-                    outboundQueue.put(output);
+                    log.info("Resend Key: " + key);
+                    tupleCacheCommands.expire(key, 20);
+                    CachedComputedOutput cachedOutput = tupleCacheCommands.get(key).get();
+                    log.info("Cached output: " + cachedOutput);
+                    // TODO: get traceId
+                    ack(topologyName, key.getSpoutTupleId(), cachedOutput.getInitTraceId());
+                    outboundQueue.put(cachedOutput.getComputedOutput());
                     log.info("Replay tuple " + key.toString() + " successfully");
                 } catch (Throwable t) {
                     log.error("Failed to replay tuple: " + t.toString());
@@ -105,7 +107,7 @@ public class ComputeThread implements Runnable {
         return tupleCacheCommands;
     }
 
-    private void spoutLoop(RedisAsyncCommands<TopologyTupleId, ComputedOutput> tupleCacheCommands) {
+    private void spoutLoop(RedisAsyncCommands<TopologyTupleId, CachedComputedOutput> tupleCacheCommands) {
         ISpout spout = (ISpout) operator;
         OutputCollector outputCollector = new OutputCollectorImpl(
                 this.outboundSchemaMap,
@@ -119,7 +121,7 @@ public class ComputeThread implements Runnable {
 
                     ComputedOutput output = new ComputedOutput(targetStreamId, msgBuilder.build().toByteArray());
                     TopologyTupleId topologyTupleId = new TopologyTupleId(topologyName, spoutTupleId);
-                    tupleCacheCommands.set(topologyTupleId, output);
+                    tupleCacheCommands.set(topologyTupleId, new CachedComputedOutput(traceId, output));
                     // TODO: reconsider tuple cache time
                     tupleCacheCommands.expire(topologyTupleId, 20);
                     ack(topologyName, spoutTupleId, traceId);

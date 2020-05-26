@@ -9,11 +9,11 @@ import com.huaouo.stormy.api.stream.*;
 public class IntermediateBoltImpl implements IBolt {
     @Override
     public void compute(Tuple tuple, OutputCollector collector) {
-        collector.emit("myStream", new Value("Name", tuple.getStringByName("Name")));
+        collector.emit("myStream", new Value("Id", tuple.getIntByName("Id")));
     }
 
     @Override
     public void declareOutputStream(OutputStreamDeclarer declarer) {
-        declarer.addSchema("myStream", new Field("Name", FieldType.STRING));
+        declarer.addSchema("myStream", new Field("Id", FieldType.INT));
     }
 }

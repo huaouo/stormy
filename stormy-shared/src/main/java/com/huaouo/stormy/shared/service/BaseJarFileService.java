@@ -16,7 +16,7 @@ import java.nio.file.Paths;
 
 @Slf4j
 public class BaseJarFileService {
-    private Path dataPath;
+    private final Path dataPath;
 
     public BaseJarFileService(String dataDir) {
 

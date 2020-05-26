@@ -8,8 +8,7 @@ import com.huaouo.stormy.api.stream.*;
 
 public class SpoutImpl implements ISpout {
 
-    private String[] names = {"Zhenhua Yang", "Andy Park", "Bob Gates"};
-    private int nameIndex = 0;
+    private int x = 0;
 
     @Override
     public void nextTuple(OutputCollector collector) {
@@ -17,11 +16,11 @@ public class SpoutImpl implements ISpout {
             Thread.sleep(1000);
         } catch (InterruptedException ignored) {
         }
-        collector.emit("myStream", new Value("Name", names[nameIndex++ % names.length]));
+        collector.emit("myStream", new Value("Id", x++));
     }
 
     @Override
     public void declareOutputStream(OutputStreamDeclarer declarer) {
-        declarer.addSchema("myStream", new Field("Name", FieldType.STRING));
+        declarer.addSchema("myStream", new Field("Id", FieldType.INT));
     }
 }

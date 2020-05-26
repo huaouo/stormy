@@ -12,7 +12,7 @@ public class BoltImpl implements IBolt {
 
     @Override
     public void compute(Tuple tuple, OutputCollector collector) {
-        System.out.println("Received Name: " + tuple.getStringByName("Name"));
+        System.out.println("Received Id: " + tuple.getIntByName("Id"));
     }
 
     @Override

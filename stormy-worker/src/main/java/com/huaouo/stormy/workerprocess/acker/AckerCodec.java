@@ -12,7 +12,7 @@ public class AckerCodec implements RedisCodec<TopologyTupleId, Integer> {
 
     @Override
     public TopologyTupleId decodeKey(ByteBuffer bytes) {
-        int spoutTupleId = decodeInt(bytes);
+        int spoutTupleId = bytes.getInt();
 
         byte[] topologyNameBytes = new byte[bytes.remaining()];
         bytes.get(topologyNameBytes);
@@ -22,39 +22,24 @@ public class AckerCodec implements RedisCodec<TopologyTupleId, Integer> {
 
     @Override
     public Integer decodeValue(ByteBuffer bytes) {
-        return decodeInt(bytes);
-    }
-
-    public int decodeInt(ByteBuffer bytes) {
-        int ret = 0;
-        int offset = 0;
-        for (int i = 0; i < 4; ++i) {
-            ret |= bytes.get() << offset;
-            offset += 8;
-        }
-        return ret;
+        return bytes.getInt();
     }
 
     @Override
     public ByteBuffer encodeKey(TopologyTupleId key) {
         byte[] topologyNameBytes = key.getTopologyName().getBytes(StandardCharsets.UTF_8);
         ByteBuffer buf = ByteBuffer.allocate(4 + topologyNameBytes.length);
-        encodeInt(buf, key.getSpoutTupleId());
+        buf.putInt(key.getSpoutTupleId());
         buf.put(topologyNameBytes);
+        buf.flip();
         return buf;
     }
 
     @Override
     public ByteBuffer encodeValue(Integer value) {
         ByteBuffer buf = ByteBuffer.allocate(4);
-        encodeInt(buf, value);
+        buf.putInt(value);
+        buf.flip();
         return buf;
-    }
-
-    public void encodeInt(ByteBuffer buf, int value) {
-        for (int i = 0; i < 4; ++i) {
-            buf.put((byte) (value & 0xFF));
-            value >>= 8;
-        }
     }
 }
