@@ -18,11 +18,11 @@ public class ClientMain {
     private static final int LACK_OF_ARGUMENTS = 2;
 
     public static void main(String[] args) throws Exception {
-        if (args.length == 0 || !args[0].matches("start|listRunning|stop")) {
+        if (args.length == 0 || !args[0].matches("start|list_running|stop")) {
             System.err.println("Usage:");
-            System.err.println("  start <nimbus_ip> <jarFile> <topologyName>");
-            System.err.println("  listRunning <nimbus_ip>");
-            System.err.println("  stop <nimbus_ip> <topologyName>");
+            System.err.println("  start <master_ip> <jarFile> <topology_name>");
+            System.err.println("  list_running <master_ip>");
+            System.err.println("  stop <master_ip> <topology_name>");
             System.exit(INVALID_COMMAND);
         }
 
@@ -45,7 +45,7 @@ public class ClientMain {
                 jarFileStream = new FileInputStream(new File(args[2]));
                 topologyName = args[3];
                 break;
-            case "listRunning":
+            case "list_running":
                 requestType = RequestType.QUERY_RUNNING_TOPOLOGY;
                 break;
             case "stop":
