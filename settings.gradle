@@ -4,5 +4,8 @@ include 'stormy-client'
 include 'stormy-master'
 include 'stormy-worker'
 include 'stormy-ui'
-include 'stormy-example'
 include 'stormy-api'
+include ':simple-example'
+project(':simple-example').projectDir = file('examples/simple-example')
+include ':analyze-example'
+project(':analyze-example').projectDir = file('examples/analyze-example')

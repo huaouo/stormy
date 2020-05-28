@@ -8,6 +8,6 @@ import lombok.Data;
 @AllArgsConstructor
 public class CachedComputedOutput {
     private int initTraceId;
-    private String topologyName;
+    private String threadId;
     private ComputedOutput computedOutput;
 }

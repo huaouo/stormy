@@ -6,7 +6,7 @@ package com.huaouo.stormy.example;
 import com.huaouo.stormy.api.IBolt;
 import com.huaouo.stormy.api.stream.*;
 
-public class IntermediateBoltImpl implements IBolt {
+public class SimpleIntermediateBolt implements IBolt {
     @Override
     public void compute(Tuple tuple, OutputCollector collector) {
         collector.emit("myStream", new Value("Id", tuple.getIntByName("Id")));

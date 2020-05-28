@@ -5,5 +5,5 @@ package com.huaouo.stormy.api.stream;
 
 public interface OutputCollector {
 
-    void emit(String target, Value... tupleElements);
+    void emit(String targetStream, Value... tupleElements);
 }

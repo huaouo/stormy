@@ -7,14 +7,14 @@ import com.huaouo.stormy.api.ITopology;
 import com.huaouo.stormy.api.topology.TopologyDefinition;
 import com.huaouo.stormy.api.topology.TopologyException;
 
-public class TopologyImpl implements ITopology {
+public class SimpleTopology implements ITopology {
 
     @Override
     public TopologyDefinition defineTopology() throws TopologyException {
         return TopologyDefinition.newBuilder()
-                .setSpout("spout", SpoutImpl.class, 1, 1)
-                .addBolt("intermediateBolt", IntermediateBoltImpl.class, 1, 1)
-                .addBolt("bolt", BoltImpl.class, 1, 1)
+                .setSpout("spout", SimpleSpout.class, 1, 1)
+                .addBolt("intermediateBolt", SimpleIntermediateBolt.class, 1, 1)
+                .addBolt("bolt", SimpleBolt.class, 1, 1)
                 .addStream("spout", "intermediateBolt", "myStream")
                 .addStream("intermediateBolt", "bolt", "myStream")
                 .build();

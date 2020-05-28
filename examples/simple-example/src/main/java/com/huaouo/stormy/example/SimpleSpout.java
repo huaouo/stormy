@@ -6,7 +6,7 @@ package com.huaouo.stormy.example;
 import com.huaouo.stormy.api.ISpout;
 import com.huaouo.stormy.api.stream.*;
 
-public class SpoutImpl implements ISpout {
+public class SimpleSpout implements ISpout {
 
     private int x = 0;
 

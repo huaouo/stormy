@@ -8,14 +8,15 @@ import com.huaouo.stormy.api.stream.OutputCollector;
 import com.huaouo.stormy.api.stream.OutputStreamDeclarer;
 import com.huaouo.stormy.api.stream.Tuple;
 
-public class BoltImpl implements IBolt {
+public class ReferBolt implements IBolt {
 
     @Override
     public void compute(Tuple tuple, OutputCollector collector) {
-        System.out.println("Received Id: " + tuple.getIntByName("Id"));
+        String refer = tuple.getStringByName("refer");
     }
 
     @Override
     public void declareOutputStream(OutputStreamDeclarer declarer) {
+
     }
 }

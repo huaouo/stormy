@@ -105,8 +105,9 @@ public class WorkerProcessServer {
         }
         threadPool.submit(messageSender);
         for (int i = 0; i < threadNum; ++i) {
-            threadPool.submit(new ComputeThread(topologyName, opClass, inboundSchema,
-                    outboundSchemaMap, inboundQueue, outboundQueue, ackerSchema));
+            threadPool.submit(new ComputeThread(taskFullName + i,
+                    topologyName, opClass, inboundSchema, outboundSchemaMap,
+                    inboundQueue, outboundQueue, ackerSchema));
         }
         // TODO: add thread monitor as new thread
     }

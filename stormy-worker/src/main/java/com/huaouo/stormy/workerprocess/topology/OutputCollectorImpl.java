@@ -36,18 +36,18 @@ public class OutputCollectorImpl implements OutputCollector {
     }
 
     @Override
-    public void emit(String target, Value... tupleElements) {
-        target = streamIdPrefix + target;
-        DynamicSchema schema = outboundSchemaMap.get(target);
+    public void emit(String targetStream, Value... tupleElements) {
+        targetStream = streamIdPrefix + targetStream;
+        DynamicSchema schema = outboundSchemaMap.get(targetStream);
         if (schema == null) {
-            throw new RuntimeException("No such schema: " + target);
+            throw new RuntimeException("No such schema: " + targetStream);
         }
         DynamicMessage.Builder msgBuilder = schema.newMessageBuilder("TupleData");
         Descriptor msgDesc = msgBuilder.getDescriptorForType();
         for (Value v : tupleElements) {
             msgBuilder.setField(msgDesc.findFieldByName(v.getName()), v.getValue());
         }
-        ComputedOutput output = beforeEmit.accept(msgBuilder, msgDesc, target);
+        ComputedOutput output = beforeEmit.accept(msgBuilder, msgDesc, targetStream);
         try {
             outboundQueue.put(output);
         } catch (InterruptedException e) {

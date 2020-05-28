@@ -3,11 +3,11 @@ dependencies {
 }
 
 shadowJar {
-    archiveFileName.set("example.jar")
+    archiveFileName.set("simple-example.jar")
 
     manifest {
         attributes(
-                'Main-Class': 'com.huaouo.stormy.example.TopologyImpl'
+                'Main-Class': 'com.huaouo.stormy.example.SimpleTopology'
         )
     }
 }

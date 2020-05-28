@@ -32,6 +32,7 @@ import java.util.concurrent.ThreadLocalRandom;
 @Slf4j
 public class ComputeThread implements Runnable {
 
+    private final String threadId;
     private final String topologyName;
     private final IOperator operator;
     private final DynamicSchema inboundSchema;
@@ -40,7 +41,8 @@ public class ComputeThread implements Runnable {
     private final Map<String, DynamicSchema> outboundSchemaMap;
     private final BlockingQueue<ComputedOutput> outboundQueue;
 
-    public ComputeThread(String topologyName,
+    public ComputeThread(String threadId,
+                         String topologyName,
                          Class<? extends IOperator> operatorClass,
                          DynamicSchema inboundSchema,
                          Map<String, DynamicSchema> outboundSchemaMap,
@@ -48,6 +50,7 @@ public class ComputeThread implements Runnable {
                          BlockingQueue<ComputedOutput> outboundQueue,
                          DynamicSchema ackerSchema)
             throws IllegalAccessException, InstantiationException {
+        this.threadId = threadId;
         this.topologyName = topologyName;
         this.operator = operatorClass.newInstance();
         this.inboundSchema = inboundSchema;
@@ -89,7 +92,7 @@ public class ComputeThread implements Runnable {
                 try {
                     tupleCacheCommands.expire(key, 20);
                     CachedComputedOutput cachedOutput = tupleCacheCommands.get(key).get();
-                    if (topologyName.equals(cachedOutput.getTopologyName())) {
+                    if (threadId.equals(cachedOutput.getThreadId())) {
                         ack(topologyName, key.getSpoutTupleId(), cachedOutput.getInitTraceId());
                         outboundQueue.put(cachedOutput.getComputedOutput());
                     }
@@ -119,7 +122,7 @@ public class ComputeThread implements Runnable {
 
                     ComputedOutput output = new ComputedOutput(targetStreamId, msgBuilder.build().toByteArray());
                     TopologyTupleId topologyTupleId = new TopologyTupleId(topologyName, spoutTupleId);
-                    tupleCacheCommands.set(topologyTupleId, new CachedComputedOutput(traceId, topologyName, output));
+                    tupleCacheCommands.set(topologyTupleId, new CachedComputedOutput(traceId, threadId, output));
                     // TODO: reconsider tuple cache time
                     tupleCacheCommands.expire(topologyTupleId, 20);
                     ack(topologyName, spoutTupleId, traceId);
