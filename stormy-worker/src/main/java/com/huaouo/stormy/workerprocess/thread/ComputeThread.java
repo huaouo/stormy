@@ -87,14 +87,12 @@ public class ComputeThread implements Runnable {
             @Override
             public void message(String channel, TopologyTupleId key) {
                 try {
-                    log.info("Resend Key: " + key);
                     tupleCacheCommands.expire(key, 20);
                     CachedComputedOutput cachedOutput = tupleCacheCommands.get(key).get();
-                    log.info("Cached output: " + cachedOutput);
-                    // TODO: get traceId
-                    ack(topologyName, key.getSpoutTupleId(), cachedOutput.getInitTraceId());
-                    outboundQueue.put(cachedOutput.getComputedOutput());
-                    log.info("Replay tuple " + key.toString() + " successfully");
+                    if (topologyName.equals(cachedOutput.getTopologyName())) {
+                        ack(topologyName, key.getSpoutTupleId(), cachedOutput.getInitTraceId());
+                        outboundQueue.put(cachedOutput.getComputedOutput());
+                    }
                 } catch (Throwable t) {
                     log.error("Failed to replay tuple: " + t.toString());
                 }
@@ -121,7 +119,7 @@ public class ComputeThread implements Runnable {
 
                     ComputedOutput output = new ComputedOutput(targetStreamId, msgBuilder.build().toByteArray());
                     TopologyTupleId topologyTupleId = new TopologyTupleId(topologyName, spoutTupleId);
-                    tupleCacheCommands.set(topologyTupleId, new CachedComputedOutput(traceId, output));
+                    tupleCacheCommands.set(topologyTupleId, new CachedComputedOutput(traceId, topologyName, output));
                     // TODO: reconsider tuple cache time
                     tupleCacheCommands.expire(topologyTupleId, 20);
                     ack(topologyName, spoutTupleId, traceId);
