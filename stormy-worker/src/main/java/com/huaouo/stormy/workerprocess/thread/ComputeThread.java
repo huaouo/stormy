@@ -92,7 +92,7 @@ public class ComputeThread implements Runnable {
                 try {
                     tupleCacheCommands.expire(key, 20);
                     CachedComputedOutput cachedOutput = tupleCacheCommands.get(key).get();
-                    if (threadId.equals(cachedOutput.getThreadId())) {
+                    if (cachedOutput != null && threadId.equals(cachedOutput.getThreadId())) {
                         ack(topologyName, key.getSpoutTupleId(), cachedOutput.getInitTraceId());
                         outboundQueue.put(cachedOutput.getComputedOutput());
                     }

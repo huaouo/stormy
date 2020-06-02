@@ -30,13 +30,14 @@ public class OutputCollectorImpl implements OutputCollector {
         this.outboundSchemaMap = outboundSchemaMap;
         if (!outboundSchemaMap.isEmpty()) {
             Iterator<String> streamIdIter = outboundSchemaMap.keySet().iterator();
-            streamIdIter.next(); // skip acker stream
-            String randomStreamId;
             try {
-                randomStreamId = streamIdIter.next();
-                String[] slicedStreamId = randomStreamId.split("-");
-                streamIdPrefix = slicedStreamId[0] + "-" + slicedStreamId[1] + "-";
+                while (streamIdPrefix.isEmpty()
+                        || streamIdPrefix.contains("~")) { // for ~ackerInbound
+                    String[] slicedStreamId = streamIdIter.next().split("-");
+                    streamIdPrefix = slicedStreamId[0] + "-" + slicedStreamId[1] + "-";
+                }
             } catch (NoSuchElementException ignored) {
+                streamIdPrefix = "";
             }
         }
         this.outboundQueue = outboundQueue;

@@ -121,6 +121,7 @@ public class ZooKeeperService {
         };
 
         int tmpThreads = 0;
+        int assignedNodeCount = 0;
         List<String> tmpInstances = new ArrayList<>();
         for (int i = 0; i < assignOrder.size(); i++) {
             String taskName = assignOrder.get(i);
@@ -132,7 +133,8 @@ public class ZooKeeperService {
                 throw new RuntimeException("Internal Error: loadInfo.peek() == null");
             }
             int curThreads = tasks.get(taskName).getThreadsPerProcess();
-            if (tmpThreads + curThreads + load.getThreads() < avgThreads) {
+            if (assignedNodeCount == loadInfos.size() - 1
+                    || tmpThreads + curThreads + load.getThreads() < avgThreads) {
                 tmpThreads += curThreads;
                 tmpInstances.add(encodeAssignment.apply(taskName));
             } else {
@@ -148,9 +150,20 @@ public class ZooKeeperService {
                 load.threads += tmpThreads;
                 load.newAssignments.addAll(tmpInstances);
                 loadInfos.add(load);
+                ++assignedNodeCount;
                 tmpThreads = 0;
                 tmpInstances.clear();
             }
+        }
+        if (!tmpInstances.isEmpty()) {
+            LoadInfo load = loadInfos.peek();
+            loadInfos.poll();
+            if (load == null) {
+                throw new RuntimeException("Internal Error: loadInfo.peek() == null");
+            }
+            load.threads += tmpThreads;
+            load.newAssignments.addAll(tmpInstances);
+            loadInfos.add(load);
         }
 
         Transaction txn = zkConn.transaction();
