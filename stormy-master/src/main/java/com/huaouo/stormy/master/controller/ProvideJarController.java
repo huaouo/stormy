@@ -31,13 +31,20 @@ public class ProvideJarController extends ProvideJarImplBase {
             responseBuilder.setMessage("Jar file doesn't exist");
             responseObserver.onNext(responseBuilder.build());
             responseObserver.onCompleted();
+            return;
         }
 
         InputStream jarInputStream = null;
-        ByteString jarBytes = null;
+        int len;
+        byte[] buf = new byte[64 * 1024];
         try {
             jarInputStream = jarService.getInputStream(topologyName);
-            jarBytes = ByteString.readFrom(jarInputStream);
+            while ((len = jarInputStream.read(buf)) != -1) {
+                responseBuilder.clear();
+                responseBuilder.setJarBytes(ByteString.copyFrom(buf, 0, len));
+                responseObserver.onNext(responseBuilder.build());
+            }
+            responseObserver.onCompleted();
         } catch (IOException e) {
             log.error(e.toString());
         } finally {
@@ -49,8 +56,5 @@ public class ProvideJarController extends ProvideJarImplBase {
                 }
             }
         }
-        responseBuilder.setJarBytes(jarBytes);
-        responseObserver.onNext(responseBuilder.build());
-        responseObserver.onCompleted();
     }
 }

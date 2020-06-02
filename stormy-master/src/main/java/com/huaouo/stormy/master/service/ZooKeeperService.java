@@ -37,7 +37,7 @@ public class ZooKeeperService {
     public void init() {
         String masterAddr = null;
         try {
-            masterAddr = SharedUtil.getIp() + ":5000";
+            masterAddr = SharedUtil.getIp() + ":6000";
         } catch (IOException e) {
             log.error("Cannot get host IP: " + e.toString());
             System.exit(-1);

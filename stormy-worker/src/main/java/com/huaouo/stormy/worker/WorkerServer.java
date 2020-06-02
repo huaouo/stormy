@@ -222,6 +222,10 @@ public class WorkerServer {
                 @Override
                 public void onNext(ProvideJarResponse value) {
                     try {
+                        if (value.getDataCase() == ProvideJarResponse.DataCase.MESSAGE) {
+                            onError(new Throwable(value.getMessage()));
+                            return;
+                        }
                         out.write(value.getJarBytes().toByteArray());
                     } catch (IOException e) {
                         onError(e);
