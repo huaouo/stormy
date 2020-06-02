@@ -86,7 +86,6 @@ public class TransmitTupleClientThread implements Runnable {
     public void run() {
         while (true) {
             Lock lock = null;
-            boolean needSleep = false;
             try {
                 ComputedOutput output = outboundQueue.take();
                 String streamId = output.getStreamId();
@@ -96,9 +95,7 @@ public class TransmitTupleClientThread implements Runnable {
                 if (!stubIter.hasNext()) {
                     Map<String, TransmitTupleStub> clientGroup = clients.get(streamId);
                     if (clientGroup.isEmpty()) {
-                        outboundQueue.put(output);
-                        needSleep = true;
-                        continue;
+                        continue; // drop tuple if no stream target
                     }
                     stubIter = clientGroup.values().iterator();
                 }
@@ -121,14 +118,7 @@ public class TransmitTupleClientThread implements Runnable {
                 });
             } catch (Throwable t) {
                 log.error(t.toString());
-                t.printStackTrace();
             } finally {
-                if (needSleep) {
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException ignored) {
-                    }
-                }
                 if (lock != null) {
                     lock.unlock();
                 }
