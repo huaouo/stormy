@@ -75,8 +75,15 @@ public class TopologyLoader {
         List<String> retOrder = new ArrayList<>();
         retOrder.add(spoutId);
         Deque<DfsState<TaskInstance>> dfsStack = new ArrayDeque<>();
-        dfsStack.push(new DfsState<>(new TaskInstance(spoutId, 0), 0));
         Map<TaskInstance, List<TaskInstance>> augmentedGraph = augmentGraph();
+        for (int replicaId = 0; ; ++replicaId) {
+            TaskInstance spoutInstance = new TaskInstance(spoutId, replicaId);
+            if (augmentedGraph.containsKey(spoutInstance)) {
+                dfsStack.push(new DfsState<>(spoutInstance, 0));
+            } else {
+                break;
+            }
+        }
 
         Set<TaskInstance> visited = new HashSet<>();
         while (!dfsStack.isEmpty()) {
@@ -184,7 +191,7 @@ public class TopologyLoader {
         try (JarFile jarFile = new JarFile(jarLocalUrl.getFile())) {
             String mainClassName = jarFile.getManifest().getMainAttributes().getValue("Main-Class");
             mainClass = loader.loadClass(mainClassName);
-            TopologyDefinition topology = ((ITopology) mainClass.newInstance()).defineTopology();
+            TopologyDefinition topology = ((ITopology) mainClass.getDeclaredConstructor().newInstance()).defineTopology();
             nodes = topology.getNodes();
             graph = topology.getGraph();
 
@@ -200,7 +207,7 @@ public class TopologyLoader {
 
             Class<?> sourceClass = loader.loadClass(nodes.get(sourceId).getClassName());
             OutputStreamDeclarer declarer = new OutputStreamDeclarer(topologyName, sourceId);
-            ((IOperator) sourceClass.newInstance()).declareOutputStream(declarer);
+            ((IOperator) sourceClass.getDeclaredConstructor().newInstance()).declareOutputStream(declarer);
             Set<String> schemaNames = declarer.getOutputStreamSchemas().keySet();
             if (schemaNames.size() != e.getValue().size()) {
                 throw new Exception("Number of schemas defined in '" + sourceId

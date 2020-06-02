@@ -26,7 +26,7 @@ import static org.apache.zookeeper.ZooDefs.Ids.OPEN_ACL_UNSAFE;
 @Singleton
 public class ZooKeeperService {
 
-    private ZooKeeperConnection zkConn;
+    private final ZooKeeperConnection zkConn;
 
     @Inject
     public ZooKeeperService(ZooKeeperConnection zkConn) {
@@ -52,7 +52,6 @@ public class ZooKeeperService {
             zkConn.set("/master", masterAddr);
         }
 
-        zkConn.create("/master/id", "0", CreateMode.EPHEMERAL);
         zkConn.create("/master/topology", null);
         zkConn.create("/worker", null);
         // for task assignment, persistent children
@@ -212,12 +211,5 @@ public class ZooKeeperService {
             result.put(name, zkConn.get("/master/topology/" + name));
         }
         return result;
-    }
-
-    public long generateId() {
-        long id = Long.parseLong(zkConn.get("/master/id"));
-        String newId = Long.toString(id + 1);
-        zkConn.set("/master/id", newId);
-        return id;
     }
 }

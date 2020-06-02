@@ -20,7 +20,7 @@ public class ClientMain {
     public static void main(String[] args) throws Exception {
         if (args.length == 0 || !args[0].matches("start|list_running|stop")) {
             System.err.println("Usage:");
-            System.err.println("  start <master_ip> <jarFile> <topology_name>");
+            System.err.println("  start <master_ip> <jar_file> <topology_name>");
             System.err.println("  list_running <master_ip>");
             System.err.println("  stop <master_ip> <topology_name>");
             System.exit(INVALID_COMMAND);
@@ -30,7 +30,7 @@ public class ClientMain {
             System.err.println("Lack of arguments");
             System.exit(LACK_OF_ARGUMENTS);
         }
-        String target = args[1] + ":5000";
+        String target = args[1] + ":6000";
         RequestType requestType = RequestType.UNRECOGNIZED;
         InputStream jarFileStream = null;
         String topologyName = null;

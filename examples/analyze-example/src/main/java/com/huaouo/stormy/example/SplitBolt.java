@@ -14,17 +14,13 @@ public class SplitBolt implements IBolt {
         String url = log.split(" ")[6];
         collector.emit("urlStream", new Value("url", url));
 
-        String[] fieldSlice = log.split("\"");
-        String refer = fieldSlice[3];
-        collector.emit("referStream", new Value("refer", refer));
-        String ua = fieldSlice[5];
+        String ua = log.split("\"")[5];
         collector.emit("uaStream", new Value("ua", ua));
     }
 
     @Override
     public void declareOutputStream(OutputStreamDeclarer declarer) {
         declarer.addSchema("urlStream", new Field("url", FieldType.STRING))
-                .addSchema("referStream", new Field("refer", FieldType.STRING))
                 .addSchema("uaStream", new Field("ua", FieldType.STRING));
     }
 }

@@ -6,7 +6,6 @@ package com.huaouo.stormy.master.topology;
 import com.huaouo.stormy.api.topology.EdgeDefinition;
 import com.huaouo.stormy.api.topology.NodeDefinition;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;

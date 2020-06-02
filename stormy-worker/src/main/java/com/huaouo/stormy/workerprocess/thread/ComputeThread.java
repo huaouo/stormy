@@ -97,6 +97,7 @@ public class ComputeThread implements Runnable {
                         outboundQueue.put(cachedOutput.getComputedOutput());
                     }
                 } catch (Throwable t) {
+                    t.printStackTrace();
                     log.error("Failed to replay tuple: " + t.toString());
                 }
             }
@@ -134,6 +135,7 @@ public class ComputeThread implements Runnable {
                 // TODO: add max tuple num constraint
                 spout.nextTuple(outputCollector);
             } catch (Throwable t) {
+                t.printStackTrace();
                 log.error(t.toString());
             }
         }
@@ -169,6 +171,7 @@ public class ComputeThread implements Runnable {
                 bolt.compute(tuple, outputCollector);
                 ack(topologyName, spoutTupleId.getValue(), tuple.getIntByName("_traceId"));
             } catch (Throwable t) {
+                t.printStackTrace();
                 log.error(t.toString());
             }
         }
@@ -183,6 +186,7 @@ public class ComputeThread implements Runnable {
                 tuple = decodeInboundMessage();
                 acker.compute(tuple, null);
             } catch (Throwable t) {
+                t.printStackTrace();
                 log.error(t.toString());
             }
         }

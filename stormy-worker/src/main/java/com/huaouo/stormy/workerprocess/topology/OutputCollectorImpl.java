@@ -11,7 +11,9 @@ import com.huaouo.stormy.api.stream.Value;
 import com.huaouo.stormy.workerprocess.thread.ComputedOutput;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 
 @Slf4j
@@ -27,9 +29,15 @@ public class OutputCollectorImpl implements OutputCollector {
                                BeforeEmitCallback beforeEmit) {
         this.outboundSchemaMap = outboundSchemaMap;
         if (!outboundSchemaMap.isEmpty()) {
-            String randomStreamId = outboundSchemaMap.keySet().iterator().next();
-            String[] slicedStreamId = randomStreamId.split("-");
-            streamIdPrefix = slicedStreamId[0] + "-" + slicedStreamId[1] + "-";
+            Iterator<String> streamIdIter = outboundSchemaMap.keySet().iterator();
+            streamIdIter.next(); // skip acker stream
+            String randomStreamId;
+            try {
+                randomStreamId = streamIdIter.next();
+                String[] slicedStreamId = randomStreamId.split("-");
+                streamIdPrefix = slicedStreamId[0] + "-" + slicedStreamId[1] + "-";
+            } catch (NoSuchElementException ignored) {
+            }
         }
         this.outboundQueue = outboundQueue;
         this.beforeEmit = beforeEmit;

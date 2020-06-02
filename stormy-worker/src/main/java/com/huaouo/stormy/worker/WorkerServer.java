@@ -232,6 +232,11 @@ public class WorkerServer {
                 public void onError(Throwable t) {
                     log.error("Fail to write jar file: " + t.toString());
                     closeOutputStream.run();
+                    try {
+                        jarService.deleteJarFile(topologyName);
+                    } catch (Throwable th) {
+                        log.error("Fail to delete jarFile when cleaning up: " + th.toString());
+                    }
                     receiveCompleted.countDown();
                 }
 
