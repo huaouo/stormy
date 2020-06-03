@@ -5,6 +5,7 @@ include 'stormy-master'
 include 'stormy-worker'
 include 'stormy-ui'
 include 'stormy-api'
+include 'prometheus-discovery'
 include ':simple-example'
 project(':simple-example').projectDir = file('examples/simple-example')
 include ':analyze-example'

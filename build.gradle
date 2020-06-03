@@ -48,7 +48,7 @@ subprojects {
         useJUnitPlatform()
     }
 
-    if (project.name.endsWithAny('master', 'worker', 'client', 'ui')) {
+    if (project.name.endsWithAny('master', 'worker', 'client', 'ui', 'discovery')) {
         shadowJar {
             def projectSuffix = project.name.split('-')[1]
 
