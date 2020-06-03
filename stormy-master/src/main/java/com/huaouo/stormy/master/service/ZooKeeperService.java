@@ -61,6 +61,7 @@ public class ZooKeeperService {
         // for storing workers' data
         zkConn.create("/worker/nodeData", null);
         zkConn.create("/stream", null);
+        zkConn.create("/exporter", null);
     }
 
     public boolean topologyExists(String topologyName) {
