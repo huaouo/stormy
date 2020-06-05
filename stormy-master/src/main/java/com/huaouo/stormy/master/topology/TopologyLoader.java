@@ -73,13 +73,13 @@ public class TopologyLoader {
     // they are not adjacent in the DAG.
     private List<String> getAssignOrder(String spoutId) {
         List<String> retOrder = new ArrayList<>();
-        retOrder.add(spoutId);
         Deque<DfsState<TaskInstance>> dfsStack = new ArrayDeque<>();
         Map<TaskInstance, List<TaskInstance>> augmentedGraph = augmentGraph();
         for (int replicaId = 0; ; ++replicaId) {
             TaskInstance spoutInstance = new TaskInstance(spoutId, replicaId);
             if (augmentedGraph.containsKey(spoutInstance)) {
                 dfsStack.push(new DfsState<>(spoutInstance, 0));
+                retOrder.add(spoutId);
             } else {
                 break;
             }

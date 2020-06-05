@@ -16,11 +16,14 @@ import com.huaouo.stormy.shared.util.SharedUtil;
 import com.huaouo.stormy.shared.wrapper.ZooKeeperConnection;
 import com.huaouo.stormy.workerprocess.acker.Acker;
 import com.huaouo.stormy.workerprocess.controller.TransmitTupleController;
+import com.huaouo.stormy.workerprocess.metrics.MetricsServer;
 import com.huaouo.stormy.workerprocess.thread.ComputedOutput;
 import com.huaouo.stormy.workerprocess.thread.ComputeThread;
 import com.huaouo.stormy.workerprocess.thread.TransmitTupleClientThread;
 import com.huaouo.stormy.workerprocess.topology.OperatorLoader;
 import io.grpc.*;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.CreateMode;
@@ -34,6 +37,7 @@ import java.net.URL;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Singleton
@@ -48,6 +52,12 @@ public class WorkerProcessServer {
     @Inject
     private ZooKeeperConnection zkConn;
 
+    @Inject
+    private MetricsServer metricsServer;
+
+    @Inject
+    PrometheusMeterRegistry prometheusRegistry;
+
     private final ExecutorService threadPool = Executors.newCachedThreadPool(r -> {
         Thread t = Executors.defaultThreadFactory().newThread(r);
         t.setDaemon(true);
@@ -59,10 +69,12 @@ public class WorkerProcessServer {
     private int threadNum;
     private String topologyName;
     private String taskName;
+    private String processIndex;
     private String inbound;
 
     public void start(String jarPath, String taskFullName) throws Throwable {
         decodeTaskFullName(taskFullName);
+        metricsServer.asyncStart(topologyName, taskName + ":" + processIndex);
         boolean isAcker = "~acker".equals(taskName);
 
         Class<? extends IOperator> opClass;
@@ -104,9 +116,15 @@ public class WorkerProcessServer {
             inboundSchema = blockUntilInboundSchemaAvailable();
         }
         threadPool.submit(messageSender);
+        IOperator op = opClass.newInstance();
+        if (op instanceof Acker) {
+            Counter tupleCount = prometheusRegistry.counter("topology.tuple.count");
+            Counter latencySum = prometheusRegistry.counter("topology.latency.sum");
+            ((Acker) op).setCounters(tupleCount, latencySum);
+        }
         for (int i = 0; i < threadNum; ++i) {
             threadPool.submit(new ComputeThread(taskFullName + i,
-                    topologyName, opClass, inboundSchema, outboundSchemaMap,
+                    topologyName, op, inboundSchema, outboundSchemaMap,
                     inboundQueue, outboundQueue, ackerSchema));
         }
         // TODO: add thread monitor as new thread
@@ -182,6 +200,7 @@ public class WorkerProcessServer {
         String[] taskInfo = taskFullName.split("#", -1);
         topologyName = taskInfo[0];
         taskName = taskInfo[1];
+        processIndex = taskInfo[2];
         threadNum = Integer.parseInt(taskInfo[3]);
         // Only one inbound stream is allowed for every bolt
         inbound = taskInfo[4].split(";")[0];

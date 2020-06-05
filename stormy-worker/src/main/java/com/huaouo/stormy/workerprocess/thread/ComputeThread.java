@@ -43,16 +43,15 @@ public class ComputeThread implements Runnable {
 
     public ComputeThread(String threadId,
                          String topologyName,
-                         Class<? extends IOperator> operatorClass,
+                         IOperator operator,
                          DynamicSchema inboundSchema,
                          Map<String, DynamicSchema> outboundSchemaMap,
                          BlockingQueue<byte[]> inboundQueue,
                          BlockingQueue<ComputedOutput> outboundQueue,
-                         DynamicSchema ackerSchema)
-            throws IllegalAccessException, InstantiationException {
+                         DynamicSchema ackerSchema) {
+        this.operator = operator;
         this.threadId = threadId;
         this.topologyName = topologyName;
-        this.operator = operatorClass.newInstance();
         this.inboundSchema = inboundSchema;
         this.outboundSchemaMap = outboundSchemaMap;
         this.inboundQueue = inboundQueue;
@@ -178,8 +177,7 @@ public class ComputeThread implements Runnable {
     }
 
     private void ackerLoop() {
-        Acker acker = new Acker();
-
+        Acker acker = (Acker) operator;
         while (true) {
             Tuple tuple;
             try {
@@ -210,6 +208,7 @@ public class ComputeThread implements Runnable {
             outboundQueue.put(new ComputedOutput(topologyName + "-~ackerInbound",
                     msgBuilder.build().toByteArray()));
         } catch (Throwable t) {
+            t.printStackTrace();
             log.error("Failed to ack: " + t.toString());
             System.exit(-1);
         }
